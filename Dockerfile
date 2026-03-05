@@ -23,5 +23,5 @@ RUN npm run build
 # Expose port
 EXPOSE 3000
 
-# Start command
-CMD ["node", "dist/src/main.js"]
+# Start command - Generate Prisma Client at runtime
+CMD ["sh", "-c", "npx prisma generate && node dist/src/main.js"]
