@@ -1,0 +1,331 @@
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { PrismaService } from '../prisma.service';
+import { getFileUrl } from '../lib/s3';
+import { randomBytes } from 'crypto';
+import { RtcTokenBuilder, RtcRole } from 'agora-access-token';
+
+@Injectable()
+export class LivestreamService {
+  constructor(private prisma: PrismaService) {}
+
+  /**
+   * Start a new live stream
+   */
+  async startLivestream(
+    userId: string,
+    title: string,
+    thumbnailFileId?: string,
+  ): Promise<any> {
+    // Check follower count requirement (minimum 1000 followers)
+    const followerCount = await this.prisma.follow.count({
+      where: {
+        followingid: userId,
+      },
+    });
+
+    if (followerCount < 1000) {
+      throw new BadRequestException(
+        `You need at least 1,000 followers to go live. You currently have ${followerCount} followers.`,
+      );
+    }
+
+    // Check if user already has an active stream
+    const existingStream = await this.prisma.livestream.findFirst({
+      where: {
+        userid: userId,
+        status: 'live',
+      },
+    });
+
+    if (existingStream) {
+      throw new BadRequestException('You already have an active live stream');
+    }
+
+    // Generate unique stream key and channel name
+    const streamKey = this.generateStreamKey();
+    const channelName = `stream_${userId}_${Date.now()}`;
+
+    const livestream = await this.prisma.livestream.create({
+      data: {
+        userid: userId,
+        title,
+        thumbnailfileid: thumbnailFileId,
+        streamkey: streamKey,
+        channelname: channelName,
+        status: 'live',
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            profilepictureid: true,
+          },
+        },
+        thumbnailFile: true,
+      },
+    });
+
+    return await this.formatLivestreamResponse(livestream);
+  }
+
+  /**
+   * End a live stream
+   */
+  async endLivestream(livestreamId: string, userId: string): Promise<void> {
+    const livestream = await this.prisma.livestream.findUnique({
+      where: { id: livestreamId },
+    });
+
+    if (!livestream) {
+      throw new NotFoundException('Live stream not found');
+    }
+
+    if (livestream.userid !== userId) {
+      throw new BadRequestException('You can only end your own live stream');
+    }
+
+    await this.prisma.livestream.update({
+      where: { id: livestreamId },
+      data: {
+        status: 'ended',
+        endtime: new Date(),
+      },
+    });
+  }
+
+  /**
+   * Get all active live streams
+   */
+  async getActiveLivestreams(): Promise<any[]> {
+    const livestreams = await this.prisma.livestream.findMany({
+      where: {
+        status: 'live',
+      },
+      orderBy: {
+        viewercount: 'desc',
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            profilepictureid: true,
+          },
+        },
+        thumbnailFile: true,
+        _count: {
+          select: { viewers: true },
+        },
+      },
+    });
+
+    return Promise.all(livestreams.map((ls) => this.formatLivestreamResponse(ls)));
+  }
+
+  /**
+   * Get specific live stream details
+   */
+  async getLivestream(livestreamId: string): Promise<any> {
+    const livestream = await this.prisma.livestream.findUnique({
+      where: { id: livestreamId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            profilepictureid: true,
+          },
+        },
+        thumbnailFile: true,
+        _count: {
+          select: { viewers: true },
+        },
+      },
+    });
+
+    if (!livestream) {
+      throw new NotFoundException('Live stream not found');
+    }
+
+    return await this.formatLivestreamResponse(livestream);
+  }
+
+  /**
+   * Join a live stream (add viewer)
+   */
+  async joinLivestream(livestreamId: string, viewerId: string): Promise<void> {
+    const livestream = await this.prisma.livestream.findUnique({
+      where: { id: livestreamId },
+    });
+
+    if (!livestream) {
+      throw new NotFoundException('Live stream not found');
+    }
+
+    if (livestream.status !== 'live') {
+      throw new BadRequestException('This live stream has ended');
+    }
+
+    // Check if already joined
+    const existingViewer = await this.prisma.livestreamviewer.findUnique({
+      where: {
+        livestreamid_viewerid: {
+          livestreamid: livestreamId,
+          viewerid: viewerId,
+        },
+      },
+    });
+
+    if (!existingViewer) {
+      // Add viewer
+      await this.prisma.livestreamviewer.create({
+        data: {
+          livestreamid: livestreamId,
+          viewerid: viewerId,
+        },
+      });
+
+      // Increment viewer count
+      const updatedStream = await this.prisma.livestream.update({
+        where: { id: livestreamId },
+        data: {
+          viewercount: { increment: 1 },
+        },
+      });
+
+      // Update peak viewers if needed
+      if (updatedStream.viewercount > updatedStream.peakviewers) {
+        await this.prisma.livestream.update({
+          where: { id: livestreamId },
+          data: {
+            peakviewers: updatedStream.viewercount,
+          },
+        });
+      }
+    }
+  }
+
+  /**
+   * Leave a live stream (remove viewer)
+   */
+  async leaveLivestream(livestreamId: string, viewerId: string): Promise<void> {
+    const viewer = await this.prisma.livestreamviewer.findUnique({
+      where: {
+        livestreamid_viewerid: {
+          livestreamid: livestreamId,
+          viewerid: viewerId,
+        },
+      },
+    });
+
+    if (viewer) {
+      await this.prisma.livestreamviewer.delete({
+        where: {
+          livestreamid_viewerid: {
+            livestreamid: livestreamId,
+            viewerid: viewerId,
+          },
+        },
+      });
+
+      // Decrement viewer count
+      await this.prisma.livestream.update({
+        where: { id: livestreamId },
+        data: {
+          viewercount: { decrement: 1 },
+        },
+      });
+    }
+  }
+
+  /**
+   * Get RTC token for Agora
+   */
+  async getRtcToken(
+    channelName: string,
+    userId: string,
+    role: 'publisher' | 'audience',
+  ): Promise<any> {
+    const appId = process.env.AGORA_APP_ID;
+    const appCertificate = process.env.AGORA_APP_CERTIFICATE;
+
+    if (!appId || !appCertificate) {
+      throw new BadRequestException('Agora credentials not configured');
+    }
+
+    // Generate UID from userId (must be a 32-bit unsigned integer)
+    const uid = Math.abs(this.hashCode(userId)) % 2147483647;
+
+    // Token expires in 24 hours
+    const expirationTimeInSeconds = 86400;
+    const currentTimestamp = Math.floor(Date.now() / 1000);
+    const privilegeExpiredTs = currentTimestamp + expirationTimeInSeconds;
+
+    // Set role
+    const agoraRole = role === 'publisher' ? RtcRole.PUBLISHER : RtcRole.SUBSCRIBER;
+
+    // Build token
+    const token = RtcTokenBuilder.buildTokenWithUid(
+      appId,
+      appCertificate,
+      channelName,
+      uid,
+      agoraRole,
+      privilegeExpiredTs,
+    );
+
+    return {
+      token,
+      channelName,
+      uid,
+      appId,
+    };
+  }
+
+  /**
+   * Generate consistent numeric UID from string userId
+   */
+  private hashCode(str: string): number {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = (hash << 5) - hash + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    return hash;
+  }
+
+  /**
+   * Generate unique stream key
+   */
+  private generateStreamKey(): string {
+    return randomBytes(16).toString('hex');
+  }
+
+  /**
+   * Format livestream response with file URLs
+   */
+  private async formatLivestreamResponse(livestream: any): Promise<any> {
+    const thumbnailUrl = livestream.thumbnailFile
+      ? await getFileUrl(
+          livestream.thumbnailFile.cloud_storage_path,
+          livestream.thumbnailFile.ispublic,
+        )
+      : null;
+
+    return {
+      id: livestream.id,
+      title: livestream.title,
+      thumbnailUrl,
+      status: livestream.status,
+      viewerCount: livestream.viewercount,
+      peakViewers: livestream.peakviewers,
+      streamKey: livestream.streamkey,
+      channelName: livestream.channelname,
+      startTime: livestream.starttime,
+      endTime: livestream.endtime,
+      user: livestream.user,
+    };
+  }
+}
