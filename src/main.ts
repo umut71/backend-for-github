@@ -36,6 +36,7 @@ async function bootstrap() {
     [
       'http://localhost:8081',
       'http://localhost:19006',
+      'http://localhost:3000',
       'exp://192.168.1.1',
       process.env.FRONTEND_URL,
       'https://buzz-web.vercel.app',
@@ -48,8 +49,18 @@ async function bootstrap() {
       origin: string | undefined,
       callback: (err: Error | null, allow?: boolean) => void,
     ) => {
-      // Allow requests with no origin (mobile apps, Postman, etc.)
+      // Allow requests with no origin (mobile apps, Electron file://, Postman, etc.)
       if (!origin) return callback(null, true);
+
+      // Always allow desktop (Electron file://) and known dev origins explicitly,
+      // regardless of NODE_ENV, so packaged desktop app always works.
+      if (
+        origin.startsWith('file://') ||
+        origin === 'http://localhost:8081' ||
+        origin === 'http://localhost:19006'
+      ) {
+        return callback(null, true);
+      }
 
       // In development, allow ALL origins
       if (process.env.NODE_ENV !== 'production') {
