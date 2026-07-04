@@ -5,11 +5,15 @@ import {
   CompleteMultipartUploadCommand,
   GetObjectCommand,
   DeleteObjectCommand,
+  HeadObjectCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { getBucketConfig, createS3Client } from './aws-config';
 
 let s3ClientInstance: ReturnType<typeof createS3Client> | null = null;
+
+// Guvenlik: upload presigned URL'leri kisa omurlu olmali (15 dk)
+const UPLOAD_URL_EXPIRES_IN = 900;
 
 function getS3Client() {
   if (!s3ClientInstance) {
@@ -36,7 +40,9 @@ export async function generatePresignedUploadUrl(
     ContentDisposition: isPublic ? 'attachment' : undefined,
   });
 
-  const uploadUrl = await getSignedUrl(client, command, { expiresIn: 3600 });
+  const uploadUrl = await getSignedUrl(client, command, {
+    expiresIn: UPLOAD_URL_EXPIRES_IN,
+  });
 
   return { uploadUrl, cloud_storage_path };
 }
@@ -80,7 +86,9 @@ export async function getPresignedUrlForPart(
     PartNumber: partNumber,
   });
 
-  const uploadUrl = await getSignedUrl(client, command, { expiresIn: 3600 });
+  const uploadUrl = await getSignedUrl(client, command, {
+    expiresIn: UPLOAD_URL_EXPIRES_IN,
+  });
 
   return uploadUrl;
 }
@@ -130,6 +138,27 @@ export async function getFileUrl(
   });
 
   return await getSignedUrl(client, command, { expiresIn: 3600 });
+}
+
+/**
+ * Server-side dogrulama icin: S3'teki nesnenin metadata'sini getirir.
+ * Nesne yoksa hata firlatir (upload tamamlanmamis demektir).
+ */
+export async function headFile(cloud_storage_path: string) {
+  const { bucketName } = getBucketConfig();
+  const client = getS3Client();
+
+  const command = new HeadObjectCommand({
+    Bucket: bucketName,
+    Key: cloud_storage_path,
+  });
+
+  const response = await client.send(command);
+
+  return {
+    contentLength: response.ContentLength,
+    etag: response.ETag,
+  };
 }
 
 export async function deleteFile(cloud_storage_path: string) {

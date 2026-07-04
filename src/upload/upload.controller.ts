@@ -11,6 +11,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { Throttle } from '@nestjs/throttler';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
@@ -29,6 +30,7 @@ export class UploadController {
 
   @Post('presigned')
   @UseGuards(JwtAuthGuard)
+  @Throttle({ short: { limit: 10, ttl: 60000 } }) // 10 presigned URL/dakika
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Generate presigned URL for single-part upload' })
   async presignedUpload(@Body() dto: PresignedUploadDto) {
@@ -58,6 +60,7 @@ export class UploadController {
 
   @Post('multipart/initiate')
   @UseGuards(JwtAuthGuard)
+  @Throttle({ short: { limit: 5, ttl: 60000 } }) // 5 multipart init/dakika (abuse önlemi)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Initiate multipart upload' })
   async initiateMultipart(@Body() dto: InitiateMultipartDto) {

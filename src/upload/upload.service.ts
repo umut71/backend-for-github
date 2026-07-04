@@ -1,7 +1,9 @@
 import {
   Injectable,
+  Logger,
   NotFoundException,
   ServiceUnavailableException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma.service';
@@ -11,6 +13,7 @@ import {
   getPresignedUrlForPart,
   completeMultipartUpload as s3CompleteMultipartUpload,
   getFileUrl,
+  headFile,
   deleteFile,
 } from '../lib/s3';
 import { PresignedUploadDto } from './dto/presigned-upload.dto';
@@ -21,6 +24,8 @@ import { CompleteUploadDto } from './dto/complete-upload.dto';
 
 @Injectable()
 export class UploadService {
+  private readonly logger = new Logger(UploadService.name);
+
   constructor(private prisma: PrismaService) {}
 
   /**
@@ -96,6 +101,37 @@ export class UploadService {
   }
 
   async completeUpload(dto: CompleteUploadDto) {
+    // Server-side dogrulama: dosya S3'te gercekten var mi ve boyutu tutuyor mu?
+    // (Lokal upload'larda cloud_storage_path tam URL olur, o durumda atlanir.)
+    const isS3Path =
+      !dto.cloud_storage_path.startsWith('http://') &&
+      !dto.cloud_storage_path.startsWith('https://');
+
+    if (isS3Path && process.env.AWS_BUCKET_NAME) {
+      let head: { contentLength?: number; etag?: string };
+      try {
+        head = await headFile(dto.cloud_storage_path);
+      } catch {
+        throw new UnprocessableEntityException(
+          'Upload verification failed: file not found in cloud storage. ' +
+            'Complete the upload (PUT / multipart complete) before calling /api/upload/complete.',
+        );
+      }
+
+      const expectedSize = BigInt(dto.fileSize);
+      if (
+        head.contentLength !== undefined &&
+        BigInt(head.contentLength) !== expectedSize
+      ) {
+        this.logger.warn(
+          `Upload size mismatch for ${dto.cloud_storage_path}: expected ${expectedSize}, got ${head.contentLength}`,
+        );
+        throw new UnprocessableEntityException(
+          `Upload verification failed: size mismatch (expected ${expectedSize} bytes, stored ${head.contentLength} bytes).`,
+        );
+      }
+    }
+
     const file = await this.prisma.file.create({
       data: {
         id: dto.fileId,
