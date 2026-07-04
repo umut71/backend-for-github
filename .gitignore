@@ -2,3 +2,12 @@ node_modules/
 dist/
 .env
 *.log
+*.bak
+*.db
+build_check.txt
+build_output.txt
+build_raporu.txt
+hatalar.txt
+tsc_errors.txt
+uploads/*
+!uploads/.gitkeep
