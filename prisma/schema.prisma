@@ -54,6 +54,7 @@ model user {
   storyViews         storyview[]
   livestreams        livestream[]
   livestreamViews    livestreamviewer[]
+  refreshTokens      refreshtoken[]
 }
 
 model role {
@@ -616,6 +617,20 @@ model storypollvote {
   @@unique([pollid, userid])
   @@index([pollid])
   @@index([userid])
+}
+
+model refreshtoken {
+  id        String    @id @default(cuid())
+  userid    String
+  tokenhash String    @unique
+  expiresat DateTime
+  revokedat DateTime?
+  createdat DateTime  @default(now())
+
+  user      user      @relation(fields: [userid], references: [id], onDelete: Cascade)
+
+  @@index([userid])
+  @@index([expiresat])
 }
 
 model errorlog {

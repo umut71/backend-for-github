@@ -1,4 +1,11 @@
-import { Controller, Post, Get, Body, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  UseGuards,
+  HttpCode,
+} from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -9,6 +16,7 @@ import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
+import { RefreshDto, LogoutDto } from './dto/refresh.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { CurrentUser } from './current-user.decorator';
 
@@ -37,6 +45,23 @@ export class AuthController {
   })
   async login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);
+  }
+
+  @Post('refresh')
+  @HttpCode(200)
+  @Throttle({ short: { limit: 10, ttl: 60000 } }) // 10 refreshes per minute
+  @ApiOperation({ summary: 'Rotate refresh token, get new token pair' })
+  @ApiResponse({ status: 200, description: 'New access + refresh tokens.' })
+  async refresh(@Body() refreshDto: RefreshDto) {
+    return this.authService.refresh(refreshDto.refreshToken);
+  }
+
+  @Post('logout')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Revoke refresh token (logout)' })
+  @ApiResponse({ status: 200, description: 'Refresh token revoked.' })
+  async logout(@Body() logoutDto: LogoutDto) {
+    return this.authService.logout(logoutDto.refreshToken);
   }
 
   @Get('me')

@@ -5,10 +5,17 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
+import * as crypto from 'crypto';
+import type { user as UserRecord, file as FileRecord } from '@prisma/client';
 import { PrismaService } from '../prisma.service';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
 import { getFileUrl } from '../lib/s3';
+
+type UserWithPicture = UserRecord & { profilePicture: FileRecord | null };
+
+/** Refresh token lifetime in days. */
+const REFRESH_TOKEN_TTL_DAYS = 30;
 
 @Injectable()
 export class AuthService {
@@ -44,14 +51,10 @@ export class AuthService {
       include: { profilePicture: true },
     });
 
-    // Generate JWT token
-    const token = this.jwtService.sign({
-      sub: user.id,
-      email: user.email,
-    });
+    const tokens = await this.issueTokens(user);
 
     return {
-      token,
+      ...tokens,
       user: await this.formatUserResponse(user),
     };
   }
@@ -75,16 +78,60 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // Generate JWT token
-    const token = this.jwtService.sign({
-      sub: user.id,
-      email: user.email,
-    });
+    const tokens = await this.issueTokens(user);
 
     return {
-      token,
+      ...tokens,
       user: await this.formatUserResponse(user),
     };
+  }
+
+  /**
+   * Rotates a refresh token: validates it, revokes it, and issues a
+   * brand-new access + refresh token pair (single-use tokens).
+   */
+  async refresh(refreshToken: string) {
+    const tokenhash = this.hashToken(refreshToken);
+    const stored = await this.prisma.refreshtoken.findUnique({
+      where: { tokenhash },
+    });
+
+    if (!stored || stored.revokedat || stored.expiresat < new Date()) {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+
+    // Rotation: the old token can never be reused.
+    await this.prisma.refreshtoken.update({
+      where: { id: stored.id },
+      data: { revokedat: new Date() },
+    });
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: stored.userid },
+      include: { profilePicture: true },
+    });
+
+    if (!user || user.isbanned) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const tokens = await this.issueTokens(user);
+
+    return {
+      ...tokens,
+      user: await this.formatUserResponse(user),
+    };
+  }
+
+  /** Revokes the given refresh token (idempotent, best effort). */
+  async logout(refreshToken?: string) {
+    if (refreshToken) {
+      await this.prisma.refreshtoken.updateMany({
+        where: { tokenhash: this.hashToken(refreshToken), revokedat: null },
+        data: { revokedat: new Date() },
+      });
+    }
+    return { success: true };
   }
 
   async me(userId: string) {
@@ -100,8 +147,35 @@ export class AuthService {
     return await this.formatUserResponse(user);
   }
 
-  private async formatUserResponse(user: any) {
-    let profilePictureUrl = null;
+  private hashToken(token: string): string {
+    return crypto.createHash('sha256').update(token).digest('hex');
+  }
+
+  /** Issues a JWT access token + a persisted, hashed refresh token. */
+  private async issueTokens(user: { id: string; email: string }) {
+    const token = this.jwtService.sign({
+      sub: user.id,
+      email: user.email,
+    });
+
+    const refreshToken = crypto.randomBytes(48).toString('hex');
+    const expiresat = new Date(
+      Date.now() + REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000,
+    );
+
+    await this.prisma.refreshtoken.create({
+      data: {
+        userid: user.id,
+        tokenhash: this.hashToken(refreshToken),
+        expiresat,
+      },
+    });
+
+    return { token, refreshToken };
+  }
+
+  private async formatUserResponse(user: UserWithPicture) {
+    let profilePictureUrl: string | null = null;
     if (user.profilePicture) {
       profilePictureUrl = await getFileUrl(
         user.profilePicture.cloud_storage_path,
