@@ -1,4 +1,8 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 
 @Injectable()
@@ -157,7 +161,8 @@ export class PremiumService {
 
     return {
       success: true,
-      message: 'Subscription canceled. Premium access will continue until the end date.',
+      message:
+        'Subscription canceled. Premium access will continue until the end date.',
       endDate: activeSubscription.enddate,
     };
   }

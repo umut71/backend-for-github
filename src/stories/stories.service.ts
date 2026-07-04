@@ -251,11 +251,17 @@ export class StoriesService {
    */
   private async formatStoryResponse(story: any): Promise<any> {
     const videoUrl = story.videoFile
-      ? await getFileUrl(story.videoFile.cloud_storage_path, story.videoFile.ispublic)
+      ? await getFileUrl(
+          story.videoFile.cloud_storage_path,
+          story.videoFile.ispublic,
+        )
       : null;
 
     const thumbnailUrl = story.thumbnailFile
-      ? await getFileUrl(story.thumbnailFile.cloud_storage_path, story.thumbnailFile.ispublic)
+      ? await getFileUrl(
+          story.thumbnailFile.cloud_storage_path,
+          story.thumbnailFile.ispublic,
+        )
       : null;
 
     return {

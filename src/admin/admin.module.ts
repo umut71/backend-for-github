@@ -4,8 +4,15 @@ import { AdminService } from './admin.service';
 import { PrismaService } from '../prisma.service';
 
 @Module({
+  imports: [
+    // Burada diğer modüller eklenebilir (örneğin AuthModule)
+  ],
   controllers: [AdminController],
   providers: [AdminService, PrismaService],
-  exports: [AdminService],
+  exports: [AdminService], // Export edilen hizmeti açıkça belirtme
 })
-export class AdminModule {}
+export class AdminModule {
+  /**
+   * Admin modülü, yönetim işlemlerini yönetmek için kullanılan servisleri ve kontrolörler içerir.
+   */
+}

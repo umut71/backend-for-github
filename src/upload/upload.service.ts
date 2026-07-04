@@ -94,6 +94,25 @@ export class UploadService {
     };
   }
 
+  async completeLocalUpload(file: any) {
+    const fileUrl = `${process.env.APP_ORIGIN || 'http://localhost:3000'}/uploads/${file.filename}`;
+    const fileRecord = await this.prisma.file.create({
+      data: {
+        filename: file.originalname,
+        mimetype: file.mimetype,
+        filesize: BigInt(file.size),
+        cloud_storage_path: fileUrl,
+        ispublic: true,
+      },
+    });
+
+    return {
+      id: fileRecord.id,
+      fileName: fileRecord.filename,
+      fileUrl,
+    };
+  }
+
   async getFileUrl(fileId: string, mode: 'view' | 'download') {
     const file = await this.prisma.file.findUnique({
       where: { id: fileId },

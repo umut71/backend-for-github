@@ -242,7 +242,10 @@ export class SearchService {
       if (hashtags) {
         hashtags.forEach((tag: string) => {
           const normalized = tag.toLowerCase();
-          hashtagCounts.set(normalized, (hashtagCounts.get(normalized) ?? 0) + 1);
+          hashtagCounts.set(
+            normalized,
+            (hashtagCounts.get(normalized) ?? 0) + 1,
+          );
         });
       }
     });

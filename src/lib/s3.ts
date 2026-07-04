@@ -60,7 +60,7 @@ export async function initiateMultipartUpload(
   const response = await client.send(command);
 
   return {
-    uploadId: response.UploadId!,
+    uploadId: response.UploadId,
     cloud_storage_path,
   };
 }
@@ -103,9 +103,15 @@ export async function completeMultipartUpload(
   await client.send(command);
 }
 
-export async function getFileUrl(cloud_storage_path: string, isPublic: boolean) {
+export async function getFileUrl(
+  cloud_storage_path: string,
+  isPublic: boolean,
+) {
   // If already a full URL (http/https), return as-is
-  if (cloud_storage_path?.startsWith('http://') || cloud_storage_path?.startsWith('https://')) {
+  if (
+    cloud_storage_path?.startsWith('http://') ||
+    cloud_storage_path?.startsWith('https://')
+  ) {
     return cloud_storage_path;
   }
 

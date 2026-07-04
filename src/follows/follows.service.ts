@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 
@@ -10,12 +15,10 @@ export class FollowsService {
   ) {}
 
   async followUser(followerId: string, followingId: string) {
-    // Cannot follow yourself
     if (followerId === followingId) {
       throw new BadRequestException('Cannot follow yourself');
     }
 
-    // Check if user exists
     const userToFollow = await this.prisma.user.findUnique({
       where: { id: followingId },
     });
@@ -24,13 +27,10 @@ export class FollowsService {
       throw new NotFoundException('User not found');
     }
 
-    // Check if already following
-    const existingFollow = await this.prisma.follow.findUnique({
+    const existingFollow = await this.prisma.follow.findFirst({
       where: {
-        followerid_followingid: {
-          followerid: followerId,
-          followingid: followingId,
-        },
+        followerid: followerId,
+        followingid: followingId,
       },
     });
 
@@ -38,7 +38,6 @@ export class FollowsService {
       throw new ConflictException('Already following this user');
     }
 
-    // Create follow
     const follow = await this.prisma.follow.create({
       data: {
         followerid: followerId,
@@ -55,7 +54,6 @@ export class FollowsService {
       },
     });
 
-    // Create notification
     await this.notificationsService.createNotification({
       userid: followingId,
       type: 'follow',
@@ -66,12 +64,10 @@ export class FollowsService {
   }
 
   async unfollowUser(followerId: string, followingId: string) {
-    const follow = await this.prisma.follow.findUnique({
+    const follow = await this.prisma.follow.findFirst({
       where: {
-        followerid_followingid: {
-          followerid: followerId,
-          followingid: followingId,
-        },
+        followerid: followerId,
+        followingid: followingId,
       },
     });
 
@@ -87,12 +83,10 @@ export class FollowsService {
   }
 
   async isFollowing(followerId: string, followingId: string): Promise<boolean> {
-    const follow = await this.prisma.follow.findUnique({
+    const follow = await this.prisma.follow.findFirst({
       where: {
-        followerid_followingid: {
-          followerid: followerId,
-          followingid: followingId,
-        },
+        followerid: followerId,
+        followingid: followingId,
       },
     });
 

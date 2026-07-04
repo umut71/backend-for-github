@@ -6,7 +6,12 @@ import { getFileUrl } from '../lib/s3';
 export class PlaylistsService {
   constructor(private prisma: PrismaService) {}
 
-  async createPlaylist(userId: string, name: string, description?: string, isPublic: boolean = true) {
+  async createPlaylist(
+    userId: string,
+    name: string,
+    description?: string,
+    isPublic: boolean = true,
+  ) {
     return this.prisma.playlist.create({
       data: { userid: userId, name, description, ispublic: isPublic },
     });
@@ -42,17 +47,29 @@ export class PlaylistsService {
     if (!playlist) throw new NotFoundException('Playlist not found');
 
     const profilePictureUrl = playlist.user.profilePicture
-      ? await getFileUrl(playlist.user.profilePicture.cloud_storage_path, playlist.user.profilePicture.ispublic)
+      ? await getFileUrl(
+          playlist.user.profilePicture.cloud_storage_path,
+          playlist.user.profilePicture.ispublic,
+        )
       : null;
 
     const videos = await Promise.all(
       (playlist.videos ?? []).map(async (pv) => {
-        const videoUrl = await getFileUrl(pv.video.videoFile.cloud_storage_path, pv.video.videoFile.ispublic);
+        const videoUrl = await getFileUrl(
+          pv.video.videoFile.cloud_storage_path,
+          pv.video.videoFile.ispublic,
+        );
         const thumbnailUrl = pv.video.thumbnailFile
-          ? await getFileUrl(pv.video.thumbnailFile.cloud_storage_path, pv.video.thumbnailFile.ispublic)
+          ? await getFileUrl(
+              pv.video.thumbnailFile.cloud_storage_path,
+              pv.video.thumbnailFile.ispublic,
+            )
           : null;
         const userProfilePicUrl = pv.video.user.profilePicture
-          ? await getFileUrl(pv.video.user.profilePicture.cloud_storage_path, pv.video.user.profilePicture.ispublic)
+          ? await getFileUrl(
+              pv.video.user.profilePicture.cloud_storage_path,
+              pv.video.user.profilePicture.ispublic,
+            )
           : null;
 
         return {
@@ -85,8 +102,14 @@ export class PlaylistsService {
     };
   }
 
-  async addVideoToPlaylist(playlistId: string, videoId: string, userId: string) {
-    const playlist = await this.prisma.playlist.findUnique({ where: { id: playlistId } });
+  async addVideoToPlaylist(
+    playlistId: string,
+    videoId: string,
+    userId: string,
+  ) {
+    const playlist = await this.prisma.playlist.findUnique({
+      where: { id: playlistId },
+    });
     if (!playlist) throw new NotFoundException('Playlist not found');
     if (playlist.userid !== userId) throw new NotFoundException('Unauthorized');
 
@@ -95,8 +118,14 @@ export class PlaylistsService {
     });
   }
 
-  async removeVideoFromPlaylist(playlistId: string, videoId: string, userId: string) {
-    const playlist = await this.prisma.playlist.findUnique({ where: { id: playlistId } });
+  async removeVideoFromPlaylist(
+    playlistId: string,
+    videoId: string,
+    userId: string,
+  ) {
+    const playlist = await this.prisma.playlist.findUnique({
+      where: { id: playlistId },
+    });
     if (!playlist) throw new NotFoundException('Playlist not found');
     if (playlist.userid !== userId) throw new NotFoundException('Unauthorized');
 
@@ -106,7 +135,9 @@ export class PlaylistsService {
   }
 
   async deletePlaylist(playlistId: string, userId: string) {
-    const playlist = await this.prisma.playlist.findUnique({ where: { id: playlistId } });
+    const playlist = await this.prisma.playlist.findUnique({
+      where: { id: playlistId },
+    });
     if (!playlist) throw new NotFoundException('Playlist not found');
     if (playlist.userid !== userId) throw new NotFoundException('Unauthorized');
 

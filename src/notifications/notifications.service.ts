@@ -35,7 +35,11 @@ export class NotificationsService {
     });
   }
 
-  async getUserNotifications(userId: string, page: number = 1, limit: number = 20) {
+  async getUserNotifications(
+    userId: string,
+    page: number = 1,
+    limit: number = 20,
+  ) {
     const skip = (page - 1) * limit;
 
     const [notifications, total, unreadCount] = await Promise.all([
@@ -62,7 +66,9 @@ export class NotificationsService {
         take: limit,
       }),
       this.prisma.notification.count({ where: { userid: userId } }),
-      this.prisma.notification.count({ where: { userid: userId, isread: false } }),
+      this.prisma.notification.count({
+        where: { userid: userId, isread: false },
+      }),
     ]);
 
     return {

@@ -50,7 +50,7 @@ export class ReportsController {
   @ApiResponse({ status: 201, description: 'Report created successfully' })
   async createReport(@Req() req: any, @Body() dto: CreateReportDto) {
     return this.reportsService.createReport(
-      req.user.userId,
+      req.user.id,
       dto.reportedtype,
       dto.reason,
       dto.description,
@@ -70,7 +70,7 @@ export class ReportsController {
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
   ) {
-    return this.reportsService.getUserReports(req.user.userId, page, limit);
+    return this.reportsService.getUserReports(req.user.id, page, limit);
   }
 
   @Get('admin/all')
@@ -102,7 +102,11 @@ export class ReportsController {
     @Param('id') reportId: string,
     @Body() dto: ResolveReportDto,
   ) {
-    return this.reportsService.resolveReport(reportId, req.user.userId, dto.action);
+    return this.reportsService.resolveReport(
+      reportId,
+      req.user.id,
+      dto.action,
+    );
   }
 
   @Get('admin/stats')

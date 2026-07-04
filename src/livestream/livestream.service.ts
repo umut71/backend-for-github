@@ -1,8 +1,12 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { getFileUrl } from '../lib/s3';
 import { randomBytes } from 'crypto';
-import { RtcTokenBuilder, RtcRole } from 'agora-access-token';
+import { RtcTokenBuilder, RtcRole } from 'agora-token';
 
 @Injectable()
 export class LivestreamService {
@@ -69,6 +73,54 @@ export class LivestreamService {
     return await this.formatLivestreamResponse(livestream);
   }
 
+  async getLivestreamEligibility(userId: string) {
+    const [followerCount, activeStream] = await Promise.all([
+      this.prisma.follow.count({
+        where: {
+          followingid: userId,
+        },
+      }),
+      this.prisma.livestream.findFirst({
+        where: {
+          userid: userId,
+          status: 'live',
+        },
+      }),
+    ]);
+
+    return {
+      canGoLive: followerCount >= 1000 && !activeStream,
+      followerCount,
+      requiredFollowers: 1000,
+      hasActiveStream: !!activeStream,
+      activeStreamId: activeStream?.id || null,
+    };
+  }
+
+  async getMyActiveLivestream(userId: string) {
+    const livestream = await this.prisma.livestream.findFirst({
+      where: {
+        userid: userId,
+        status: 'live',
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            profilepictureid: true,
+          },
+        },
+        thumbnailFile: true,
+        _count: {
+          select: { viewers: true },
+        },
+      },
+    });
+
+    return livestream ? this.formatLivestreamResponse(livestream) : null;
+  }
+
   /**
    * End a live stream
    */
@@ -92,6 +144,38 @@ export class LivestreamService {
         endtime: new Date(),
       },
     });
+  }
+
+  async getLivestreamGifts(livestreamId: string) {
+    const livestream = await this.prisma.livestream.findUnique({
+      where: { id: livestreamId },
+      select: { userid: true },
+    });
+
+    if (!livestream) {
+      throw new NotFoundException('Live stream not found');
+    }
+
+    const gifts = await this.prisma.gift.findMany({
+      where: {
+        receiverid: livestream.userid,
+        videoid: null,
+      },
+      include: {
+        sender: {
+          select: {
+            id: true,
+            username: true,
+            profilepictureid: true,
+          },
+        },
+        giftType: true,
+      },
+      orderBy: { createdat: 'desc' },
+      take: 50,
+    });
+
+    return gifts;
   }
 
   /**
@@ -120,7 +204,9 @@ export class LivestreamService {
       },
     });
 
-    return Promise.all(livestreams.map((ls) => this.formatLivestreamResponse(ls)));
+    return Promise.all(
+      livestreams.map((ls) => this.formatLivestreamResponse(ls)),
+    );
   }
 
   /**
@@ -263,7 +349,8 @@ export class LivestreamService {
     const privilegeExpiredTs = currentTimestamp + expirationTimeInSeconds;
 
     // Set role
-    const agoraRole = role === 'publisher' ? RtcRole.PUBLISHER : RtcRole.SUBSCRIBER;
+    const agoraRole =
+      role === 'publisher' ? RtcRole.PUBLISHER : RtcRole.SUBSCRIBER;
 
     // Build token
     const token = RtcTokenBuilder.buildTokenWithUid(
@@ -272,6 +359,7 @@ export class LivestreamService {
       channelName,
       uid,
       agoraRole,
+      privilegeExpiredTs,
       privilegeExpiredTs,
     );
 

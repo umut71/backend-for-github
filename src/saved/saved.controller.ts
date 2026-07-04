@@ -1,5 +1,19 @@
-import { Controller, Get, Post, Delete, Param, Query, UseGuards, ParseIntPipe } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Post,
+  Delete,
+  Param,
+  Query,
+  UseGuards,
+  ParseIntPipe,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { SavedService } from './saved.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -22,7 +36,10 @@ export class SavedController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Unsave video' })
-  async unsaveVideo(@CurrentUser() user: any, @Param('videoId') videoId: string) {
+  async unsaveVideo(
+    @CurrentUser() user: any,
+    @Param('videoId') videoId: string,
+  ) {
     await this.savedService.unsaveVideo(user.id, videoId);
     return { success: true };
   }

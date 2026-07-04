@@ -5,7 +5,12 @@ import { PrismaService } from '../prisma.service';
 export class StoryPollsService {
   constructor(private prisma: PrismaService) {}
 
-  async create(storyId: string, question: string, option1: string, option2: string) {
+  async create(
+    storyId: string,
+    question: string,
+    option1: string,
+    option2: string,
+  ) {
     return this.prisma.storypoll.create({
       data: {
         storyid: storyId,
@@ -60,8 +65,10 @@ export class StoryPollsService {
     if (!poll) return null;
 
     const totalVotes = poll.votes1 + poll.votes2;
-    const percentage1 = totalVotes > 0 ? Math.round((poll.votes1 / totalVotes) * 100) : 0;
-    const percentage2 = totalVotes > 0 ? Math.round((poll.votes2 / totalVotes) * 100) : 0;
+    const percentage1 =
+      totalVotes > 0 ? Math.round((poll.votes1 / totalVotes) * 100) : 0;
+    const percentage2 =
+      totalVotes > 0 ? Math.round((poll.votes2 / totalVotes) * 100) : 0;
 
     return {
       ...poll,
@@ -69,7 +76,10 @@ export class StoryPollsService {
       percentage1,
       percentage2,
       userVoted: userId ? poll.votes && poll.votes.length > 0 : false,
-      userVotedOption: userId && poll.votes && poll.votes.length > 0 ? poll.votes[0].option : null,
+      userVotedOption:
+        userId && poll.votes && poll.votes.length > 0
+          ? poll.votes[0].option
+          : null,
     };
   }
 }

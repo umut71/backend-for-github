@@ -10,12 +10,18 @@ import {
   ParseIntPipe,
   DefaultValuePipe,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiResponse,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { FollowsService } from './follows.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @ApiTags('follows')
-@Controller('users')
+@Controller('api/users')
 export class FollowsController {
   constructor(private readonly followsService: FollowsService) {}
 
@@ -43,10 +49,15 @@ export class FollowsController {
   @Get(':id/is-following')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Check if current user is following the specified user' })
+  @ApiOperation({
+    summary: 'Check if current user is following the specified user',
+  })
   @ApiResponse({ status: 200, description: 'Returns follow status' })
   async isFollowing(@Param('id') followingId: string, @Request() req: any) {
-    const isFollowing = await this.followsService.isFollowing(req.user.id, followingId);
+    const isFollowing = await this.followsService.isFollowing(
+      req.user.id,
+      followingId,
+    );
     return { isFollowing };
   }
 
@@ -78,7 +89,10 @@ export class FollowsController {
 
   @Get(':id/follow-counts')
   @ApiOperation({ summary: 'Get follower and following counts' })
-  @ApiResponse({ status: 200, description: 'Returns follower and following counts' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns follower and following counts',
+  })
   async getFollowCounts(@Param('id') userId: string) {
     return this.followsService.getFollowCounts(userId);
   }

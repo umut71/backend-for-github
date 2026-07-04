@@ -7,8 +7,13 @@ import {
   Param,
   Query,
   UseGuards,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
 import { UploadService } from './upload.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PresignedUploadDto } from './dto/presigned-upload.dto';
@@ -28,6 +33,27 @@ export class UploadController {
   @ApiOperation({ summary: 'Generate presigned URL for single-part upload' })
   async presignedUpload(@Body() dto: PresignedUploadDto) {
     return this.uploadService.generatePresignedUrl(dto);
+  }
+
+  @Post('local')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: './uploads',
+        filename: (_req, file, cb) => {
+          cb(
+            null,
+            `${Date.now()}-${Math.round(Math.random() * 1e9)}${extname(file.originalname)}`,
+          );
+        },
+      }),
+    }),
+  )
+  @ApiOperation({ summary: 'Upload file to local development storage' })
+  async localUpload(@UploadedFile() file: any) {
+    return this.uploadService.completeLocalUpload(file);
   }
 
   @Post('multipart/initiate')
@@ -61,6 +87,4 @@ export class UploadController {
   async completeUpload(@Body() dto: CompleteUploadDto) {
     return this.uploadService.completeUpload(dto);
   }
-
-
 }

@@ -7,5 +7,6 @@ import { PrismaModule } from '../prisma/prisma.module';
   imports: [PrismaModule],
   controllers: [ChallengesController],
   providers: [ChallengesService],
+  exports: [ChallengesService], // Servisleri dışarıya aktarmayı unutmayın
 })
 export class ChallengesModule {}

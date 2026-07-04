@@ -37,9 +37,22 @@ export class SavedService {
 
     return Promise.all(
       saved.map(async (s) => {
-        const videoUrl = await getFileUrl(s.video.videoFile.cloud_storage_path, s.video.videoFile.ispublic);
-        const thumbnailUrl = s.video.thumbnailFile ? await getFileUrl(s.video.thumbnailFile.cloud_storage_path, s.video.thumbnailFile.ispublic) : null;
-        const profilePictureUrl = s.video.user.profilePicture ? await getFileUrl(s.video.user.profilePicture.cloud_storage_path, s.video.user.profilePicture.ispublic) : null;
+        const videoUrl = await getFileUrl(
+          s.video.videoFile.cloud_storage_path,
+          s.video.videoFile.ispublic,
+        );
+        const thumbnailUrl = s.video.thumbnailFile
+          ? await getFileUrl(
+              s.video.thumbnailFile.cloud_storage_path,
+              s.video.thumbnailFile.ispublic,
+            )
+          : null;
+        const profilePictureUrl = s.video.user.profilePicture
+          ? await getFileUrl(
+              s.video.user.profilePicture.cloud_storage_path,
+              s.video.user.profilePicture.ispublic,
+            )
+          : null;
 
         return {
           id: s.video.id,

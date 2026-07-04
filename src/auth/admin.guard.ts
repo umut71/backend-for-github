@@ -1,4 +1,9 @@
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import {
+  ExecutionContext,
+  CanActivate,
+  ForbiddenException,
+} from '@nestjs/common';
 import { Observable } from 'rxjs';
 
 @Injectable()
@@ -13,10 +18,14 @@ export class AdminGuard implements CanActivate {
       throw new ForbiddenException('Authentication required');
     }
 
-    if (user.role !== 'admin') {
+    if (!this.isUserAdmin(user)) {
       throw new ForbiddenException('Admin access required');
     }
 
     return true;
+  }
+
+  private isUserAdmin(user: any): boolean {
+    return user && user.role === 'admin';
   }
 }

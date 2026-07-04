@@ -5,36 +5,25 @@ import { PrismaService } from '../prisma.service';
 export class HashtagsService {
   constructor(private prisma: PrismaService) {}
 
-  /**
-   * Extract hashtags from text (e.g., "Check #trending #viral video!")
-   * Returns array of hashtag strings without # prefix
-   */
   extractHashtags(text: string): string[] {
     if (!text) return [];
-    
+
     const hashtagRegex = /#([\w\u0590-\u05ff]+)/gi;
     const matches = text.match(hashtagRegex);
-    
+
     if (!matches) return [];
-    
-    // Remove # and convert to lowercase, remove duplicates
+
     const hashtags = matches.map((tag) => tag.slice(1).toLowerCase());
     return [...new Set(hashtags)];
   }
 
-  /**
-   * Save hashtags for a video (creates new hashtags if needed)
-   * Updates usecount for existing hashtags
-   */
   async saveHashtagsForVideo(videoId: string, text: string): Promise<void> {
     const tags = this.extractHashtags(text);
-    
+
     if (tags.length === 0) return;
 
-    // Process each hashtag
     for (const tag of tags) {
-      // Upsert hashtag (create or increment usecount)
-      const hashtag = await this.prisma.hashtag.upsert({
+      const newHashtag = await this.prisma.hashtag.upsert({
         where: { tag },
         create: {
           tag,
@@ -45,34 +34,28 @@ export class HashtagsService {
         },
       });
 
-      // Link video to hashtag (ignore if already linked)
       await this.prisma.videohashtag.upsert({
         where: {
           videoid_hashtagid: {
             videoid: videoId,
-            hashtagid: hashtag.id,
+            hashtagid: newHashtag.id,
           },
         },
         create: {
           videoid: videoId,
-          hashtagid: hashtag.id,
+          hashtagid: newHashtag.id,
         },
         update: {},
       });
     }
   }
 
-  /**
-   * Remove hashtags for a video when updating
-   */
   async removeHashtagsForVideo(videoId: string): Promise<void> {
-    // Get current hashtags
     const videoHashtags = await this.prisma.videohashtag.findMany({
       where: { videoid: videoId },
       include: { hashtag: true },
     });
 
-    // Delete links and decrement usecount
     for (const vh of videoHashtags) {
       await this.prisma.videohashtag.delete({
         where: {
@@ -83,36 +66,32 @@ export class HashtagsService {
         },
       });
 
-      await this.prisma.hashtag.update({
+      const hashtag = await this.prisma.hashtag.findUnique({
         where: { id: vh.hashtagid },
-        data: { usecount: { decrement: 1 } },
       });
+
+      if (hashtag && hashtag.usecount > 0) {
+        await this.prisma.hashtag.update({
+          where: { id: vh.hashtagid },
+          data: { usecount: { decrement: 1 } },
+        });
+      }
     }
   }
 
-  /**
-   * Get trending hashtags (most used)
-   */
   async getTrendingHashtags(limit: number = 20): Promise<any[]> {
-    const hashtags = await this.prisma.hashtag.findMany({
-      where: {
-        usecount: { gt: 0 },
-      },
-      orderBy: {
-        usecount: 'desc',
-      },
+    const trendingHashtags = await this.prisma.hashtag.findMany({
+      where: { usecount: { gt: 0 } },
+      orderBy: { usecount: 'desc' },
       take: limit,
     });
 
-    return hashtags.map((h) => ({
+    return trendingHashtags.map((h) => ({
       tag: h.tag,
       count: h.usecount,
     }));
   }
 
-  /**
-   * Get videos by hashtag
-   */
   async getVideosByHashtag(
     tag: string,
     page: number = 1,
@@ -158,17 +137,11 @@ export class HashtagsService {
             },
           },
         },
-        orderBy: {
-          video: {
-            createdat: 'desc',
-          },
-        },
+        orderBy: { video: { createdat: 'desc' } },
         skip,
         take: limit,
       }),
-      this.prisma.videohashtag.count({
-        where: { hashtagid: hashtag.id },
-      }),
+      this.prisma.videohashtag.count({ where: { hashtagid: hashtag.id } }),
     ]);
 
     const videos = videoHashtags.map((vh) => vh.video);
@@ -185,21 +158,13 @@ export class HashtagsService {
     };
   }
 
-  /**
-   * Get popular hashtags for suggestions
-   */
   async getPopularHashtags(limit: number = 10): Promise<string[]> {
-    const hashtags = await this.prisma.hashtag.findMany({
-      where: {
-        usecount: { gt: 2 }, // At least 3 uses
-      },
-      orderBy: [
-        { usecount: 'desc' },
-        { updatedat: 'desc' },
-      ],
+    const popularHashtags = await this.prisma.hashtag.findMany({
+      where: { usecount: { gt: 2 } },
+      orderBy: [{ usecount: 'desc' }, { updatedat: 'desc' }],
       take: limit,
     });
 
-    return hashtags.map((h) => `#${h.tag}`);
+    return popularHashtags.map((h) => `#${h.tag}`);
   }
 }

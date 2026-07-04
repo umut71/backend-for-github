@@ -10,12 +10,18 @@ import {
   ParseIntPipe,
   DefaultValuePipe,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiResponse,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { LikesService } from './likes.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @ApiTags('likes')
-@Controller('videos')
+@Controller('api/videos')
 export class LikesController {
   constructor(private readonly likesService: LikesService) {}
 
@@ -54,7 +60,10 @@ export class LikesController {
   @ApiOperation({ summary: 'Get users who liked the video' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
-  @ApiResponse({ status: 200, description: 'Returns list of users who liked the video' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns list of users who liked the video',
+  })
   async getVideoLikes(
     @Param('id') videoId: string,
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,

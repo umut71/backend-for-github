@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsNumber, IsUUID, IsBoolean } from 'class-validator';
+import { IsString, IsOptional, IsNumber, IsBoolean } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateVideoDto {
@@ -11,13 +11,13 @@ export class CreateVideoDto {
   @IsString()
   description?: string;
 
-  @ApiProperty({ example: 'uuid-of-video-file' })
-  @IsUUID()
+  @ApiProperty({ example: 'file-id (cuid)' })
+  @IsString()
   videoFileId: string;
 
-  @ApiProperty({ required: false, example: 'uuid-of-thumbnail-file' })
+  @ApiProperty({ required: false, example: 'thumbnail file-id (cuid)' })
   @IsOptional()
-  @IsUUID()
+  @IsString()
   thumbnailFileId?: string;
 
   @ApiProperty({ required: false, example: 60 })
@@ -25,18 +25,30 @@ export class CreateVideoDto {
   @IsNumber()
   duration?: number;
 
-  @ApiProperty({ required: false, example: false, description: 'Is this video a duet?' })
+  @ApiProperty({
+    required: false,
+    example: false,
+    description: 'Is this video a duet?',
+  })
   @IsOptional()
   @IsBoolean()
   isDuet?: boolean;
 
-  @ApiProperty({ required: false, example: 'uuid-of-original-video', description: 'ID of original video for duets' })
+  @ApiProperty({
+    required: false,
+    example: 'original video file-id (cuid)',
+    description: 'ID of original video for duets',
+  })
   @IsOptional()
-  @IsUUID()
+  @IsString()
   originalVideoId?: string;
 
-  @ApiProperty({ required: false, example: 'uuid-of-sound', description: 'ID of sound/music' })
+  @ApiProperty({
+    required: false,
+    example: 'sound id (cuid)',
+    description: 'ID of sound/music',
+  })
   @IsOptional()
-  @IsUUID()
+  @IsString()
   soundId?: string;
 }

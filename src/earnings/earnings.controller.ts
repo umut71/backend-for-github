@@ -8,7 +8,13 @@ import {
   DefaultValuePipe,
   ParseIntPipe,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiResponse,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { EarningsService } from './earnings.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -23,7 +29,7 @@ export class EarningsController {
   @ApiOperation({ summary: 'Get earnings overview' })
   @ApiResponse({ status: 200, description: 'Returns earnings overview' })
   async getOverview(@Req() req: any) {
-    return this.earningsService.getEarningsOverview(req.user.userId);
+    return this.earningsService.getEarningsOverview(req.user.id);
   }
 
   @Get('history')
@@ -36,24 +42,32 @@ export class EarningsController {
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
   ) {
-    return this.earningsService.getEarningsHistory(req.user.userId, page, limit);
+    return this.earningsService.getEarningsHistory(
+      req.user.id,
+      page,
+      limit,
+    );
   }
 
   @Post('payout/request')
   @ApiOperation({ summary: 'Request payout' })
   @ApiResponse({ status: 201, description: 'Payout request submitted' })
   async requestPayout(@Req() req: any) {
-    return this.earningsService.requestPayout(req.user.userId);
+    return this.earningsService.requestPayout(req.user.id);
   }
 
   @Get('analytics')
   @ApiOperation({ summary: 'Get earnings analytics' })
-  @ApiQuery({ name: 'period', required: false, enum: ['week', 'month', 'year'] })
+  @ApiQuery({
+    name: 'period',
+    required: false,
+    enum: ['week', 'month', 'year'],
+  })
   @ApiResponse({ status: 200, description: 'Returns earnings analytics' })
   async getAnalytics(
     @Req() req: any,
     @Query('period') period: 'week' | 'month' | 'year' = 'month',
   ) {
-    return this.earningsService.getEarningsAnalytics(req.user.userId, period);
+    return this.earningsService.getEarningsAnalytics(req.user.id, period);
   }
 }

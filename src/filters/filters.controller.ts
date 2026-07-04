@@ -1,22 +1,32 @@
-import { Controller, Post, Get, Body } from '@nestjs/common';
+import { Controller, Get, Post, Body } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBody } from '@nestjs/swagger';
 import { FiltersService } from './filters.service';
 
 @ApiTags('Filters')
 @Controller('api/filters')
 export class FiltersController {
-  constructor(private filtersService: FiltersService) {}
+  constructor(private readonly filtersService: FiltersService) {}
 
   @Get('presets')
-  @ApiOperation({ summary: 'Get preset filters' })
-  async getPresetFilters() {
+  @ApiOperation({ summary: 'Retrieve preset filters' })
+  async getPresetFilters(): Promise<any[]> {
     return this.filtersService.getPresetFilters();
   }
 
   @Post('generate')
-  @ApiOperation({ summary: 'Generate AI filter from prompt' })
-  @ApiBody({ schema: { properties: { prompt: { type: 'string' } } } })
-  async generateFilter(@Body() body: { prompt: string }) {
-    return this.filtersService.generateFilterFromPrompt(body.prompt);
+  @ApiOperation({ summary: 'Generate AI filter based on the provided prompt' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        prompt: {
+          type: 'string',
+          description: 'The text prompt to generate a filter from',
+        },
+      },
+    },
+  })
+  async generateFilter(@Body('prompt') prompt: string): Promise<any> {
+    return this.filtersService.generateFilterFromPrompt(prompt);
   }
 }

@@ -1,5 +1,19 @@
-import { Controller, Get, Post, Delete, Param, Query, UseGuards, ParseIntPipe } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Post,
+  Delete,
+  Param,
+  Query,
+  UseGuards,
+  ParseIntPipe,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { HistoryService } from './history.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -13,7 +27,10 @@ export class HistoryController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Add video to watch history' })
-  async addToHistory(@CurrentUser() user: any, @Param('videoId') videoId: string) {
+  async addToHistory(
+    @CurrentUser() user: any,
+    @Param('videoId') videoId: string,
+  ) {
     await this.historyService.addToHistory(user.id, videoId);
     return { success: true };
   }

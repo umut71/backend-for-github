@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Delete, Param, Body, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Delete,
+  Param,
+  Body,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
 import { VoiceCommentsService } from './voicecomments.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -13,13 +21,25 @@ export class VoiceCommentsController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create voice comment' })
-  @ApiBody({ schema: { properties: { audioUrl: { type: 'string' }, duration: { type: 'number' } } } })
+  @ApiBody({
+    schema: {
+      properties: {
+        audioUrl: { type: 'string' },
+        duration: { type: 'number' },
+      },
+    },
+  })
   async create(
     @Param('videoId') videoId: string,
     @CurrentUser() user: any,
-    @Body() body: { audioUrl: string; duration: number }
+    @Body() body: { audioUrl: string; duration: number },
   ) {
-    return this.voiceCommentsService.create(videoId, user.id, body.audioUrl, body.duration);
+    return this.voiceCommentsService.create(
+      videoId,
+      user.id,
+      body.audioUrl,
+      body.duration,
+    );
   }
 
   @Get(':videoId')

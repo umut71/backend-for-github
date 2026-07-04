@@ -1,4 +1,8 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 
 @Injectable()
@@ -47,7 +51,12 @@ export class GiftsService {
   }
 
   // Purchase coins - REQUIRES PAYMENT VERIFICATION
-  async purchaseCoins(userId: string, amount: number, paymentId?: string, verified = false) {
+  async purchaseCoins(
+    userId: string,
+    amount: number,
+    paymentId?: string,
+    verified = false,
+  ) {
     // CRITICAL SECURITY: This endpoint should ONLY be called after payment verification
     // For Google Play Billing, verify the purchase token before calling this
     if (!verified) {
@@ -104,7 +113,7 @@ export class GiftsService {
           balancebefore: balanceBefore,
           balanceafter: balanceAfter,
           description: `Purchased ${amount} coins`,
-          metadata: JSON.stringify({ 
+          metadata: JSON.stringify({
             paymentId,
             verifiedAt: new Date().toISOString(),
             platform: 'google_play', // or 'app_store'
@@ -280,10 +289,16 @@ export class GiftsService {
   }
 
   // Get gift history
-  async getGiftHistory(userId: string, type: 'sent' | 'received', page = 1, limit = 20) {
+  async getGiftHistory(
+    userId: string,
+    type: 'sent' | 'received',
+    page = 1,
+    limit = 20,
+  ) {
     const skip = (page - 1) * limit;
 
-    const where = type === 'sent' ? { senderid: userId } : { receiverid: userId };
+    const where =
+      type === 'sent' ? { senderid: userId } : { receiverid: userId };
 
     const [gifts, total] = await Promise.all([
       this.prisma.gift.findMany({
@@ -371,7 +386,9 @@ export class GiftsService {
     });
 
     if (bonusCountToday >= 5) {
-      throw new BadRequestException('Daily bonus limit reached (max 5 per day)');
+      throw new BadRequestException(
+        'Daily bonus limit reached (max 5 per day)',
+      );
     }
 
     const user = await this.prisma.user.findUnique({

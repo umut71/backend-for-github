@@ -5,7 +5,12 @@ import { PrismaService } from '../prisma.service';
 export class VoiceCommentsService {
   constructor(private prisma: PrismaService) {}
 
-  async create(videoId: string, userId: string, audioUrl: string, duration: number) {
+  async create(
+    videoId: string,
+    userId: string,
+    audioUrl: string,
+    duration: number,
+  ) {
     const voiceComment = await this.prisma.voicecomment.create({
       data: {
         videoid: videoId,

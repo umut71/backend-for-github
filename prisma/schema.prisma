@@ -1,16 +1,15 @@
 generator client {
     provider = "prisma-client-js"
-    binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
-    output = "/home/ubuntu/buzz/nodejs_space/node_modules/.prisma/client"
+    output   = "../node_modules/.prisma/client"
 }
 
 datasource db {
-    provider = "postgresql"
+    provider = "sqlite"
     url      = env("DATABASE_URL")
 }
 
 model user {
-  id                 String    @id @default(uuid())
+  id                 String    @id @default(cuid())
   email              String    @unique
   password           String
   username           String    @unique
@@ -58,7 +57,7 @@ model user {
 }
 
 model role {
-  id          String   @id @default(uuid())
+  id          String   @id @default(cuid())
   name        String   @unique
   displayname String
   description String?
@@ -72,7 +71,7 @@ model role {
 }
 
 model permission {
-  id          String   @id @default(uuid())
+  id          String   @id @default(cuid())
   name        String   @unique
   category    String
   description String?
@@ -85,7 +84,7 @@ model permission {
 }
 
 model rolepermission {
-  id           String     @id @default(uuid())
+  id           String     @id @default(cuid())
   roleid       String
   permissionid String
   createdat    DateTime   @default(now())
@@ -99,7 +98,7 @@ model rolepermission {
 }
 
 model video {
-  id               String    @id @default(uuid())
+  id               String    @id @default(cuid())
   userid           String
   title            String
   description      String?
@@ -138,7 +137,7 @@ model video {
 }
 
 model like {
-  id        String    @id @default(uuid())
+  id        String    @id @default(cuid())
   userid    String
   videoid   String
   createdat DateTime  @default(now())
@@ -152,7 +151,7 @@ model like {
 }
 
 model comment {
-  id        String    @id @default(uuid())
+  id        String    @id @default(cuid())
   userid    String
   videoid   String
   text      String
@@ -169,7 +168,7 @@ model comment {
 }
 
 model follow {
-  id          String    @id @default(uuid())
+  id          String    @id @default(cuid())
   followerid  String
   followingid String
   createdat   DateTime  @default(now())
@@ -183,7 +182,7 @@ model follow {
 }
 
 model notification {
-  id             String    @id @default(uuid())
+  id             String    @id @default(cuid())
   userid         String
   type           String
   message        String?
@@ -203,7 +202,7 @@ model notification {
 }
 
 model file {
-  id                   String    @id @default(uuid())
+  id                   String    @id @default(cuid())
   filename             String
   mimetype             String
   filesize             BigInt
@@ -221,7 +220,7 @@ model file {
 
 // Gift System
 model gifttype {
-  id          String   @id @default(uuid())
+  id          String   @id @default(cuid())
   name        String   @unique
   displayname String
   coinvalue   Int
@@ -234,7 +233,7 @@ model gifttype {
 }
 
 model gift {
-  id           String   @id @default(uuid())
+  id           String   @id @default(cuid())
   senderid     String
   receiverid   String
   gifttypeid   String
@@ -252,7 +251,7 @@ model gift {
 }
 
 model transaction {
-  id              String   @id @default(uuid())
+  id              String   @id @default(cuid())
   userid          String
   type            String
   amount          Int
@@ -270,7 +269,7 @@ model transaction {
 
 // Premium Subscription
 model subscription {
-  id          String   @id @default(uuid())
+  id          String   @id @default(cuid())
   userid      String
   plan        String
   status      String
@@ -289,7 +288,7 @@ model subscription {
 
 // Creator Earnings
 model earning {
-  id          String   @id @default(uuid())
+  id          String   @id @default(cuid())
   userid      String
   amount      Int
   source      String
@@ -308,7 +307,7 @@ model earning {
 
 // Report System
 model report {
-  id              String   @id @default(uuid())
+  id              String   @id @default(cuid())
   reporterid      String
   reportedtype    String
   reporteduserid  String?
@@ -332,7 +331,7 @@ model report {
 }
 
 model hashtag {
-  id        String   @id @default(uuid())
+  id        String   @id @default(cuid())
   tag       String   @unique
   usecount  Int      @default(0)
   createdat DateTime @default(now())
@@ -358,7 +357,7 @@ model videohashtag {
 }
 
 model message {
-  id         String   @id @default(uuid())
+  id         String   @id @default(cuid())
   senderid   String
   receiverid String
   content    String
@@ -376,7 +375,7 @@ model message {
 }
 
 model story {
-  id              String   @id @default(uuid())
+  id              String   @id @default(cuid())
   userid          String
   videofileid     String
   thumbnailfileid String?
@@ -396,7 +395,7 @@ model story {
 }
 
 model storyview {
-  id        String   @id @default(uuid())
+  id        String   @id @default(cuid())
   storyid   String
   viewerid  String
   viewedat  DateTime @default(now())
@@ -410,7 +409,7 @@ model storyview {
 }
 
 model livestream {
-  id              String   @id @default(uuid())
+  id              String   @id @default(cuid())
   userid          String
   title           String
   thumbnailfileid String?
@@ -433,7 +432,7 @@ model livestream {
 }
 
 model livestreamviewer {
-  id           String   @id @default(uuid())
+  id           String   @id @default(cuid())
   livestreamid String
   viewerid     String
   jointime     DateTime @default(now())
@@ -447,7 +446,7 @@ model livestreamviewer {
 }
 
 model sound {
-  id          String   @id @default(uuid())
+  id          String   @id @default(cuid())
   jamendoid   String   @unique
   name        String
   artist      String
@@ -463,7 +462,7 @@ model sound {
 }
 
 model challenge {
-  id          String   @id @default(uuid())
+  id          String   @id @default(cuid())
   title       String
   description String
   hashtag     String
@@ -476,7 +475,7 @@ model challenge {
 }
 
 model watchhistory {
-  id        String   @id @default(uuid())
+  id        String   @id @default(cuid())
   userid    String
   videoid   String
   watchedat DateTime @default(now())
@@ -491,7 +490,7 @@ model watchhistory {
 
 
 model savedvideo {
-  id        String   @id @default(uuid())
+  id        String   @id @default(cuid())
   userid    String
   videoid   String
   savedat   DateTime @default(now())
@@ -504,7 +503,7 @@ model savedvideo {
 }
 
 model playlist {
-  id          String   @id @default(uuid())
+  id          String   @id @default(cuid())
   userid      String
   name        String
   description String?
@@ -518,7 +517,7 @@ model playlist {
 }
 
 model playlistvideo {
-  id         String   @id @default(uuid())
+  id         String   @id @default(cuid())
   playlistid String
   videoid    String
   addedat    DateTime @default(now())
@@ -531,7 +530,7 @@ model playlistvideo {
 }
 
 model blockeduser {
-  id         String   @id @default(uuid())
+  id         String   @id @default(cuid())
   userid     String
   blockedid  String
   createdat  DateTime @default(now())
@@ -544,7 +543,7 @@ model blockeduser {
 }
 
 model sharecount {
-  id        String   @id @default(uuid())
+  id        String   @id @default(cuid())
   videoid   String
   platform  String
   count     Int      @default(1)
@@ -557,7 +556,7 @@ model sharecount {
 }
 
 model referral {
-  id          String   @id @default(uuid())
+  id          String   @id @default(cuid())
   referrerid  String
   referredid  String?
   code        String   @unique
@@ -574,7 +573,7 @@ model referral {
 }
 
 model voicecomment {
-  id        String   @id @default(uuid())
+  id        String   @id @default(cuid())
   videoid   String
   userid    String
   audiourl  String
@@ -589,7 +588,7 @@ model voicecomment {
 }
 
 model storypoll {
-  id        String   @id @default(uuid())
+  id        String   @id @default(cuid())
   storyid   String   @unique
   question  String
   option1   String
@@ -605,7 +604,7 @@ model storypoll {
 }
 
 model storypollvote {
-  id       String   @id @default(uuid())
+  id       String   @id @default(cuid())
   pollid   String
   userid   String
   option   Int
@@ -617,4 +616,25 @@ model storypollvote {
   @@unique([pollid, userid])
   @@index([pollid])
   @@index([userid])
+}
+
+model errorlog {
+  id          String    @id @default(cuid())
+  statusCode  Int
+  path        String
+  method      String
+  message     String
+  stack       String?
+  userAgent   String?
+  ip          String?
+  userId      String?
+  resolved    Boolean   @default(false)
+  notes       String?
+  createdat   DateTime  @default(now())
+  resolvedat  DateTime?
+
+  @@index([resolved])
+  @@index([statusCode])
+  @@index([createdat])
+  @@index([path])
 }

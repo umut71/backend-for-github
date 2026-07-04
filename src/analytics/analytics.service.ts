@@ -22,6 +22,35 @@ export class AnalyticsService {
       },
     });
 
+    // Get user earnings from gifts (within days)
+    const earnings = await this.prisma.earning.findMany({
+      where: {
+        userid: userId,
+        createdat: { gte: cutoffDate },
+        status: 'pending',
+      },
+    });
+
+    const totalEarnings = earnings.reduce((sum, e) => sum + e.amount, 0);
+    const giftCount = earnings.length;
+
+    if (!videos || videos.length === 0) {
+      return {
+        overview: {
+          totalViews: 0,
+          totalLikes: 0,
+          totalComments: 0,
+          totalVideos: 0,
+          engagementRate: 0,
+          avgViewsPerVideo: 0,
+          totalEarnings,
+          giftCount,
+        },
+        topVideos: [],
+        viewsByDay: [],
+      };
+    }
+
     // Calculate total stats
     const totalViews = videos.reduce((sum, v) => sum + v.viewcount, 0);
     const totalLikes = videos.reduce((sum, v) => sum + v.likecount, 0);
@@ -29,9 +58,8 @@ export class AnalyticsService {
     const totalVideos = videos.length;
 
     // Calculate engagement rate
-    const engagementRate = totalViews > 0
-      ? ((totalLikes + totalComments) / totalViews) * 100
-      : 0;
+    const engagementRate =
+      totalViews > 0 ? ((totalLikes + totalComments) / totalViews) * 100 : 0;
 
     // Get top performing videos
     const topVideos = videos
@@ -52,9 +80,7 @@ export class AnalyticsService {
       }));
 
     // Get recent videos for growth chart
-    const recentVideos = videos.filter(
-      (v) => v.createdat >= cutoffDate,
-    );
+    const recentVideos = videos.filter((v) => v.createdat >= cutoffDate);
 
     // Group views by day for growth chart
     const viewsByDay = this.groupViewsByDay(recentVideos, days);
@@ -66,7 +92,10 @@ export class AnalyticsService {
         totalComments,
         totalVideos,
         engagementRate: parseFloat(engagementRate.toFixed(2)),
-        avgViewsPerVideo: totalVideos > 0 ? Math.round(totalViews / totalVideos) : 0,
+        avgViewsPerVideo:
+          totalVideos > 0 ? Math.round(totalViews / totalVideos) : 0,
+        totalEarnings,
+        giftCount,
       },
       topVideos,
       viewsByDay,
@@ -109,8 +138,10 @@ export class AnalyticsService {
     );
 
     // Get like-to-view ratio
-    const likeRatio = video.viewcount > 0 ? (video.likecount / video.viewcount) * 100 : 0;
-    const commentRatio = video.viewcount > 0 ? (video.commentcount / video.viewcount) * 100 : 0;
+    const likeRatio =
+      video.viewcount > 0 ? (video.likecount / video.viewcount) * 100 : 0;
+    const commentRatio =
+      video.viewcount > 0 ? (video.commentcount / video.viewcount) * 100 : 0;
 
     return {
       id: video.id,
@@ -125,7 +156,11 @@ export class AnalyticsService {
       engagementRate: parseFloat(engagementRate.toFixed(2)),
       likeRatio: parseFloat(likeRatio.toFixed(2)),
       commentRatio: parseFloat(commentRatio.toFixed(2)),
-      performance: this.calculatePerformance(video.viewcount, video.likecount, video.commentcount),
+      performance: this.calculatePerformance(
+        video.viewcount,
+        video.likecount,
+        video.commentcount,
+      ),
     };
   }
 
@@ -156,7 +191,11 @@ export class AnalyticsService {
     return result;
   }
 
-  private calculatePerformance(views: number, likes: number, comments: number): string {
+  private calculatePerformance(
+    views: number,
+    likes: number,
+    comments: number,
+  ): string {
     const engagement = views > 0 ? ((likes + comments) / views) * 100 : 0;
 
     if (engagement >= 10) return 'Excellent';

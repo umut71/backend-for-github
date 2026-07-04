@@ -23,9 +23,15 @@ export class ReferralsController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Apply referral code' })
   @ApiBody({ schema: { properties: { code: { type: 'string' } } } })
-  async applyReferralCode(@CurrentUser() user: any, @Body() body: { code: string }) {
+  async applyReferralCode(
+    @CurrentUser() user: any,
+    @Body() body: { code: string },
+  ) {
     await this.referralsService.applyReferralCode(body.code, user.id);
-    return { success: true, message: '50 coins credited! Your friend will receive 100 coins.' };
+    return {
+      success: true,
+      message: '50 coins credited! Your friend will receive 100 coins.',
+    };
   }
 
   @Get('stats')

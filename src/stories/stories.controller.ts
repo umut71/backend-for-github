@@ -36,7 +36,11 @@ export class StoriesController {
     @Body('videoFileId') videoFileId: string,
     @Body('thumbnailFileId') thumbnailFileId?: string,
   ) {
-    return this.storiesService.createStory(user.id, videoFileId, thumbnailFileId);
+    return this.storiesService.createStory(
+      user.id,
+      videoFileId,
+      thumbnailFileId,
+    );
   }
 
   @Get('active')
@@ -46,17 +50,14 @@ export class StoriesController {
   }
 
   @Get('user/:userId')
-  @ApiOperation({ summary: 'Get specific user\'s active stories' })
+  @ApiOperation({ summary: "Get specific user's active stories" })
   async getUserStories(@Param('userId') userId: string) {
     return this.storiesService.getUserStories(userId);
   }
 
   @Post('view/:storyId')
   @ApiOperation({ summary: 'Mark a story as viewed' })
-  async viewStory(
-    @CurrentUser() user: any,
-    @Param('storyId') storyId: string,
-  ) {
+  async viewStory(@CurrentUser() user: any, @Param('storyId') storyId: string) {
     await this.storiesService.viewStory(storyId, user.id);
     return { success: true };
   }

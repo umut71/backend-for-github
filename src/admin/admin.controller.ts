@@ -11,7 +11,14 @@ import {
   ParseIntPipe,
   DefaultValuePipe,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiQuery, ApiBody } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiResponse,
+  ApiQuery,
+  ApiBody,
+} from '@nestjs/swagger';
 import { AdminService } from './admin.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/permissions.guard';
@@ -85,7 +92,10 @@ export class AdminController {
     },
   })
   @ApiResponse({ status: 200, description: 'Role assigned successfully' })
-  async assignRole(@Param('id') userId: string, @Body('roleName') roleName: string) {
+  async assignRole(
+    @Param('id') userId: string,
+    @Body('roleName') roleName: string,
+  ) {
     return this.adminService.assignRole(userId, roleName);
   }
 
@@ -93,7 +103,10 @@ export class AdminController {
   @Get('roles')
   @RequirePermissions('admin.roles', 'admin.manage')
   @ApiOperation({ summary: 'Get all roles' })
-  @ApiResponse({ status: 200, description: 'Returns list of roles with permissions' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns list of roles with permissions',
+  })
   async getAllRoles() {
     return this.adminService.getAllRoles();
   }
@@ -143,9 +156,15 @@ export class AdminController {
   @Get('analytics/system')
   @RequirePermissions('analytics.view', 'system.manage')
   @ApiOperation({ summary: 'Get system analytics' })
-  @ApiQuery({ name: 'period', required: false, enum: ['day', 'week', 'month', 'year'] })
+  @ApiQuery({
+    name: 'period',
+    required: false,
+    enum: ['day', 'week', 'month', 'year'],
+  })
   @ApiResponse({ status: 200, description: 'Returns system analytics' })
-  async getSystemAnalytics(@Query('period') period: 'day' | 'week' | 'month' | 'year' = 'month') {
+  async getSystemAnalytics(
+    @Query('period') period: 'day' | 'week' | 'month' | 'year' = 'month',
+  ) {
     return this.adminService.getSystemAnalytics(period);
   }
 
@@ -155,8 +174,15 @@ export class AdminController {
   @ApiOperation({ summary: 'Get fraud alerts - suspicious activities' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
-  @ApiQuery({ name: 'riskLevel', required: false, enum: ['low', 'medium', 'high'] })
-  @ApiResponse({ status: 200, description: 'Returns fraud alerts and suspicious activities' })
+  @ApiQuery({
+    name: 'riskLevel',
+    required: false,
+    enum: ['low', 'medium', 'high'],
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns fraud alerts and suspicious activities',
+  })
   async getFraudAlerts(
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
@@ -168,8 +194,64 @@ export class AdminController {
   @Get('fraud/user/:userId')
   @RequirePermissions('finance.view', 'system.manage')
   @ApiOperation({ summary: 'Get detailed fraud report for a specific user' })
-  @ApiResponse({ status: 200, description: 'Returns user fraud report with risk assessment' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns user fraud report with risk assessment',
+  })
   async getUserFraudReport(@Param('userId') userId: string) {
     return this.adminService.getUserFraudReport(userId);
+  }
+
+  // ERROR LOGS & SYSTEM HEALTH
+  @Get('system/errors')
+  @RequirePermissions('system.manage', 'analytics.view')
+  @ApiOperation({ summary: 'Get error logs' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'resolved', required: false, type: Boolean })
+  @ApiQuery({ name: 'statusCode', required: false, type: Number })
+  @ApiResponse({ status: 200, description: 'Returns error logs' })
+  async getErrorLogs(
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+    @Query('resolved') resolved?: string,
+    @Query('statusCode', new ParseIntPipe({ optional: true }))
+    statusCode?: number,
+  ) {
+    const resolvedBool =
+      resolved === undefined ? undefined : resolved === 'true';
+    return this.adminService.getErrorLogs(
+      page,
+      limit,
+      resolvedBool,
+      statusCode,
+    );
+  }
+
+  @Put('system/errors/:id/resolve')
+  @RequirePermissions('system.manage')
+  @ApiOperation({ summary: 'Mark error as resolved' })
+  @ApiResponse({ status: 200, description: 'Error marked as resolved' })
+  async resolveError(
+    @Param('id') errorId: string,
+    @Body('notes') notes?: string,
+  ) {
+    return this.adminService.resolveError(errorId, notes);
+  }
+
+  @Get('system/health')
+  @RequirePermissions('system.manage', 'analytics.view')
+  @ApiOperation({ summary: 'Get system health status' })
+  @ApiResponse({ status: 200, description: 'Returns system health metrics' })
+  async getSystemHealth() {
+    return this.adminService.getSystemHealth();
+  }
+
+  @Get('system/stats')
+  @RequirePermissions('system.manage', 'analytics.view')
+  @ApiOperation({ summary: 'Get system statistics' })
+  @ApiResponse({ status: 200, description: 'Returns system stats' })
+  async getSystemStats() {
+    return this.adminService.getSystemStats();
   }
 }

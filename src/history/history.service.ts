@@ -6,15 +6,37 @@ import { getFileUrl } from '../lib/s3';
 export class HistoryService {
   constructor(private prisma: PrismaService) {}
 
-  async addToHistory(userId: string, videoId: string) {
+  async addToHistory(userId: string, videoId: string): Promise<void> {
     await this.prisma.watchhistory.upsert({
       where: { userid_videoid: { userid: userId, videoid: videoId } },
-      create: { userid: userId, videoid: videoId },
+      create: { userid: userId, videoid: videoId, watchedat: new Date() },
       update: { watchedat: new Date() },
     });
   }
 
-  async getHistory(userId: string, limit: number = 20, offset: number = 0) {
+  async getHistory(
+    userId: string,
+    limit: number = 20,
+    offset: number = 0,
+  ): Promise<
+    {
+      watchedAt: Date;
+      video: {
+        id: string;
+        title: string;
+        description: string;
+        videoUrl: string;
+        thumbnailUrl: string | null;
+        viewCount: number;
+        likeCount: number;
+        user: {
+          id: string;
+          username: string;
+          profilePictureUrl: string | null;
+        };
+      };
+    }[]
+  > {
     const history = await this.prisma.watchhistory.findMany({
       where: { userid: userId },
       include: {
@@ -31,11 +53,24 @@ export class HistoryService {
       skip: offset,
     });
 
-    return Promise.all(
+    const enrichedHistory = await Promise.all(
       history.map(async (h) => {
-        const videoUrl = await getFileUrl(h.video.videoFile.cloud_storage_path, h.video.videoFile.ispublic);
-        const thumbnailUrl = h.video.thumbnailFile ? await getFileUrl(h.video.thumbnailFile.cloud_storage_path, h.video.thumbnailFile.ispublic) : null;
-        const profilePictureUrl = h.video.user.profilePicture ? await getFileUrl(h.video.user.profilePicture.cloud_storage_path, h.video.user.profilePicture.ispublic) : null;
+        const videoUrl = await getFileUrl(
+          h.video.videoFile.cloud_storage_path,
+          h.video.videoFile.ispublic,
+        );
+        const thumbnailUrl = h.video.thumbnailFile
+          ? await getFileUrl(
+              h.video.thumbnailFile.cloud_storage_path,
+              h.video.thumbnailFile.ispublic,
+            )
+          : null;
+        const profilePictureUrl = h.video.user.profilePicture
+          ? await getFileUrl(
+              h.video.user.profilePicture.cloud_storage_path,
+              h.video.user.profilePicture.ispublic,
+            )
+          : null;
 
         return {
           watchedAt: h.watchedat,
@@ -56,9 +91,11 @@ export class HistoryService {
         };
       }),
     );
+
+    return enrichedHistory;
   }
 
-  async clearHistory(userId: string) {
+  async clearHistory(userId: string): Promise<void> {
     await this.prisma.watchhistory.deleteMany({ where: { userid: userId } });
   }
 }

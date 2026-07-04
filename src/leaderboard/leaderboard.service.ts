@@ -20,10 +20,14 @@ export class LeaderboardService {
     return Promise.all(
       users.map(async (user, index) => {
         const profilePictureUrl = user.profilePicture
-          ? await getFileUrl(user.profilePicture.cloud_storage_path, user.profilePicture.ispublic)
+          ? await getFileUrl(
+              user.profilePicture.cloud_storage_path,
+              user.profilePicture.ispublic,
+            )
           : null;
 
-        const totalViews = user.videos?.reduce?.((sum, v) => sum + (v.viewcount ?? 0), 0) ?? 0;
+        const totalViews =
+          user.videos?.reduce?.((sum, v) => sum + (v.viewcount ?? 0), 0) ?? 0;
 
         return {
           rank: index + 1,
@@ -45,21 +49,27 @@ export class LeaderboardService {
         videoFile: true,
         thumbnailFile: true,
       },
-      orderBy: [
-        { viewcount: 'desc' },
-        { likecount: 'desc' },
-      ],
+      orderBy: [{ viewcount: 'desc' }, { likecount: 'desc' }],
       take: limit,
     });
 
     return Promise.all(
       videos.map(async (video, index) => {
-        const videoUrl = await getFileUrl(video.videoFile.cloud_storage_path, video.videoFile.ispublic);
+        const videoUrl = await getFileUrl(
+          video.videoFile.cloud_storage_path,
+          video.videoFile.ispublic,
+        );
         const thumbnailUrl = video.thumbnailFile
-          ? await getFileUrl(video.thumbnailFile.cloud_storage_path, video.thumbnailFile.ispublic)
+          ? await getFileUrl(
+              video.thumbnailFile.cloud_storage_path,
+              video.thumbnailFile.ispublic,
+            )
           : null;
         const profilePictureUrl = video.user.profilePicture
-          ? await getFileUrl(video.user.profilePicture.cloud_storage_path, video.user.profilePicture.ispublic)
+          ? await getFileUrl(
+              video.user.profilePicture.cloud_storage_path,
+              video.user.profilePicture.ispublic,
+            )
           : null;
 
         return {

@@ -8,8 +8,16 @@ import {
   Query,
   UseGuards,
   ParseIntPipe,
+  Req,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import type { Request } from 'express';
+import { JwtService } from '@nestjs/jwt';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { VideosService } from './videos.service';
 import { CreateVideoDto } from './dto/create-video.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -18,16 +26,16 @@ import { CurrentUser } from '../auth/current-user.decorator';
 @ApiTags('Videos')
 @Controller('api/videos')
 export class VideosController {
-  constructor(private videosService: VideosService) {}
+  constructor(
+    private videosService: VideosService,
+    private jwtService: JwtService,
+  ) {}
 
   @Post()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create video' })
-  async createVideo(
-    @CurrentUser() user: any,
-    @Body() dto: CreateVideoDto,
-  ) {
+  async createVideo(@CurrentUser() user: any, @Body() dto: CreateVideoDto) {
     return this.videosService.createVideo(user.id, dto);
   }
 
@@ -38,8 +46,27 @@ export class VideosController {
   async getVideoFeed(
     @Query('page', new ParseIntPipe({ optional: true })) page?: number,
     @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
+    @Req() req?: Request,
   ) {
-    return this.videosService.getVideoFeed(page || 1, limit || 10);
+    return this.videosService.getVideoFeed(
+      page || 1,
+      limit || 10,
+      this.getOptionalUserId(req),
+    );
+  }
+
+  private getOptionalUserId(req?: Request) {
+    const authHeader = req?.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) return undefined;
+
+    try {
+      const payload: any = this.jwtService.verify(authHeader.split(' ')[1], {
+        secret: process.env.JWT_SECRET,
+      });
+      return payload.sub || payload.id;
+    } catch {
+      return undefined;
+    }
   }
 
   @Get(':id')

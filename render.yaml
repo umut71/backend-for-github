@@ -1,0 +1,55 @@
+services:
+  - type: web
+    name: buzz-backend
+    runtime: node
+    plan: free
+    buildCommand: npm install && npx prisma generate && npm run build
+    startCommand: npx prisma db push && node dist/src/main.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: buzz-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: AWS_BUCKET_NAME
+        sync: false
+      - key: AWS_REGION
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: AGORA_APP_ID
+        sync: false
+      - key: AGORA_APP_CERTIFICATE
+        sync: false
+      - key: JAMENDO_CLIENT_ID
+        sync: false
+      - key: ABACUSAI_API_KEY
+        sync: false
+      - key: ADMIN_DASHBOARD_URL
+        sync: false
+
+databases:
+  - name: buzz-db
+    plan: free
+    databaseName: buzz
+    user: buzz
+
+# After deploy, set env vars in Render Dashboard:
+# AWS_BUCKET_NAME, AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+# AGORA_APP_ID, AGORA_APP_CERTIFICATE
+# FRONTEND_URL, ALLOWED_ORIGINS (your app domains)
+# JAMENDO_CLIENT_ID, ABACUSAI_API_KEY
+# API docs: https://<service>.onrender.com/api-docs
+# Health: https://<service>.onrender.com/health
+# Deploy: https://dashboard.render.com/blueprint/new (upload render.yaml)

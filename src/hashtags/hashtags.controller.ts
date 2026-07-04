@@ -1,7 +1,12 @@
 import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { HashtagsService } from './hashtags.service';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiQuery,
+} from '@nestjs/swagger';
 
 @ApiTags('hashtags')
 @Controller('hashtags')
@@ -33,6 +38,10 @@ export class HashtagsController {
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 20,
   ) {
-    return this.hashtagsService.getVideosByHashtag(tag, Number(page), Number(limit));
+    return this.hashtagsService.getVideosByHashtag(
+      tag,
+      Number(page),
+      Number(limit),
+    );
   }
 }

@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Delete, Param, Body, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Delete,
+  Param,
+  Body,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
 import { PlaylistsService } from './playlists.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -13,9 +21,25 @@ export class PlaylistsController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create playlist' })
-  @ApiBody({ schema: { properties: { name: { type: 'string' }, description: { type: 'string' }, isPublic: { type: 'boolean' } } } })
-  async createPlaylist(@CurrentUser() user: any, @Body() body: { name: string; description?: string; isPublic?: boolean }) {
-    return this.playlistsService.createPlaylist(user.id, body.name, body.description, body.isPublic);
+  @ApiBody({
+    schema: {
+      properties: {
+        name: { type: 'string' },
+        description: { type: 'string' },
+        isPublic: { type: 'boolean' },
+      },
+    },
+  })
+  async createPlaylist(
+    @CurrentUser() user: any,
+    @Body() body: { name: string; description?: string; isPublic?: boolean },
+  ) {
+    return this.playlistsService.createPlaylist(
+      user.id,
+      body.name,
+      body.description,
+      body.isPublic,
+    );
   }
 
   @Get('user/:userId')
@@ -34,8 +58,16 @@ export class PlaylistsController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Add video to playlist' })
-  async addVideoToPlaylist(@CurrentUser() user: any, @Param('playlistId') playlistId: string, @Param('videoId') videoId: string) {
-    await this.playlistsService.addVideoToPlaylist(playlistId, videoId, user.id);
+  async addVideoToPlaylist(
+    @CurrentUser() user: any,
+    @Param('playlistId') playlistId: string,
+    @Param('videoId') videoId: string,
+  ) {
+    await this.playlistsService.addVideoToPlaylist(
+      playlistId,
+      videoId,
+      user.id,
+    );
     return { success: true };
   }
 
@@ -43,8 +75,16 @@ export class PlaylistsController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Remove video from playlist' })
-  async removeVideoFromPlaylist(@CurrentUser() user: any, @Param('playlistId') playlistId: string, @Param('videoId') videoId: string) {
-    await this.playlistsService.removeVideoFromPlaylist(playlistId, videoId, user.id);
+  async removeVideoFromPlaylist(
+    @CurrentUser() user: any,
+    @Param('playlistId') playlistId: string,
+    @Param('videoId') videoId: string,
+  ) {
+    await this.playlistsService.removeVideoFromPlaylist(
+      playlistId,
+      videoId,
+      user.id,
+    );
     return { success: true };
   }
 

@@ -62,11 +62,15 @@ export class ReferralsService {
   async getReferralStats(userId: string) {
     const referrals = await this.prisma.referral.findMany({
       where: { referrerid: userId },
-      include: { referred: { select: { id: true, username: true, createdat: true } } },
+      include: {
+        referred: { select: { id: true, username: true, createdat: true } },
+      },
       orderBy: { createdat: 'desc' },
     });
 
-    const totalReferred = referrals.filter((r) => r.status === 'completed').length;
+    const totalReferred = referrals.filter(
+      (r) => r.status === 'completed',
+    ).length;
     const totalEarned = totalReferred * 100;
     const pending = referrals.filter((r) => r.status === 'pending').length;
 
@@ -80,10 +84,12 @@ export class ReferralsService {
         reward: r.reward,
         createdAt: r.createdat,
         completedAt: r.completedat,
-        referred: r.referred ? {
-          username: r.referred.username,
-          joinedAt: r.referred.createdat,
-        } : null,
+        referred: r.referred
+          ? {
+              username: r.referred.username,
+              joinedAt: r.referred.createdat,
+            }
+          : null,
       })),
     };
   }

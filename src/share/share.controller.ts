@@ -9,8 +9,15 @@ export class ShareController {
 
   @Post(':videoId')
   @ApiOperation({ summary: 'Track video share' })
-  @ApiBody({ schema: { properties: { platform: { type: 'string', example: 'whatsapp' } } } })
-  async trackShare(@Param('videoId') videoId: string, @Body() body: { platform: string }) {
+  @ApiBody({
+    schema: {
+      properties: { platform: { type: 'string', example: 'whatsapp' } },
+    },
+  })
+  async trackShare(
+    @Param('videoId') videoId: string,
+    @Body() body: { platform: string },
+  ) {
     await this.shareService.trackShare(videoId, body.platform);
     return { success: true };
   }

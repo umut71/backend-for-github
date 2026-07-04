@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 
 @Injectable()
@@ -7,13 +11,14 @@ export class AdminService {
 
   // Dashboard İstatistikleri
   async getDashboardStats() {
-    const [totalUsers, totalVideos, totalLikes, totalComments, bannedUsers] = await Promise.all([
-      this.prisma.user.count(),
-      this.prisma.video.count(),
-      this.prisma.like.count(),
-      this.prisma.comment.count(),
-      this.prisma.user.count({ where: { isbanned: true } }),
-    ]);
+    const [totalUsers, totalVideos, totalLikes, totalComments, bannedUsers] =
+      await Promise.all([
+        this.prisma.user.count(),
+        this.prisma.video.count(),
+        this.prisma.like.count(),
+        this.prisma.comment.count(),
+        this.prisma.user.count({ where: { isbanned: true } }),
+      ]);
 
     // Son 7 gün için günlük kullanıcı kayıtları
     const sevenDaysAgo = new Date();
@@ -311,7 +316,7 @@ export class AdminService {
     });
 
     // Platform commission (30% of gifts)
-    const totalGiftsValue = Math.abs((giftsSent._sum?.amount ?? 0));
+    const totalGiftsValue = Math.abs(giftsSent._sum?.amount ?? 0);
     const platformCommission = Math.floor(totalGiftsValue * 0.3);
 
     return {
@@ -340,7 +345,9 @@ export class AdminService {
   }
 
   // System Analytics
-  async getSystemAnalytics(period: 'day' | 'week' | 'month' | 'year' = 'month') {
+  async getSystemAnalytics(
+    period: 'day' | 'week' | 'month' | 'year' = 'month',
+  ) {
     const now = new Date();
     let startDate: Date;
 
@@ -398,7 +405,11 @@ export class AdminService {
   }
 
   // FRAUD DETECTION - Suspicious Activities
-  async getFraudAlerts(page = 1, limit = 20, riskLevel?: 'low' | 'medium' | 'high') {
+  async getFraudAlerts(
+    page = 1,
+    limit = 20,
+    riskLevel?: 'low' | 'medium' | 'high',
+  ) {
     const skip = (page - 1) * limit;
     const now = new Date();
     const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
@@ -461,24 +472,30 @@ export class AdminService {
 
     // 4. Get user details for suspicious earners
     const suspiciousEarnersDetails = await Promise.all(
-      suspiciousEarners.map(async (earner: { userid: string; _sum: { amount: number | null }; _count: { id: number } }) => {
-        const user = await this.prisma.user.findUnique({
-          where: { id: earner.userid },
-          select: {
-            id: true,
-            username: true,
-            email: true,
-            createdat: true,
-          },
-        });
-        return {
-          user,
-          totalEarned: earner._sum?.amount ?? 0,
-          transactionCount: earner._count?.id ?? 0,
-          riskLevel: (earner._sum?.amount ?? 0) > 500 ? 'high' : 'medium',
-          reason: 'High earnings in short period',
-        };
-      }),
+      suspiciousEarners.map(
+        async (earner: {
+          userid: string;
+          _sum: { amount: number | null };
+          _count: { id: number };
+        }) => {
+          const user = await this.prisma.user.findUnique({
+            where: { id: earner.userid },
+            select: {
+              id: true,
+              username: true,
+              email: true,
+              createdat: true,
+            },
+          });
+          return {
+            user,
+            totalEarned: earner._sum?.amount ?? 0,
+            transactionCount: earner._count?.id ?? 0,
+            riskLevel: (earner._sum?.amount ?? 0) > 500 ? 'high' : 'medium',
+            reason: 'High earnings in short period',
+          };
+        },
+      ),
     );
 
     // 5. Users with multiple accounts (same email pattern)
@@ -701,6 +718,126 @@ export class AdminService {
               ? 'REVIEW - Additional verification recommended'
               : 'APPROVED - Normal activity',
       },
+    };
+  }
+
+  // ─── Error Log Management ───
+
+  async getErrorLogs(
+    page: number = 1,
+    limit: number = 20,
+    resolved?: boolean,
+    statusCode?: number,
+  ) {
+    const skip = (page - 1) * limit;
+    const where: any = {};
+    if (resolved !== undefined) where.resolved = resolved;
+    if (statusCode !== undefined) where.statusCode = statusCode;
+
+    const [logs, total] = await Promise.all([
+      this.prisma.errorlog.findMany({
+        where,
+        orderBy: { createdat: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.errorlog.count({ where }),
+    ]);
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayCount = await this.prisma.errorlog.count({
+      where: { createdat: { gte: today } },
+    });
+
+    return {
+      logs,
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      summary: {
+        total,
+        today: todayCount,
+        unresolved: await this.prisma.errorlog.count({
+          where: { resolved: false },
+        }),
+      },
+    };
+  }
+
+  async resolveError(errorId: string, notes?: string) {
+    const error = await this.prisma.errorlog.findUnique({
+      where: { id: errorId },
+    });
+    if (!error) throw new NotFoundException('Error log not found');
+
+    return this.prisma.errorlog.update({
+      where: { id: errorId },
+      data: { resolved: true, notes, resolvedat: new Date() },
+    });
+  }
+
+  async getSystemHealth() {
+    // Memory
+    const mem = process.memoryUsage();
+    const heapUsedMB = Math.round((mem.heapUsed / 1024 / 1024) * 100) / 100;
+
+    // DB check
+    let dbStatus = 'ok';
+    try {
+      await this.prisma.$queryRaw`SELECT 1`;
+    } catch {
+      dbStatus = 'error';
+    }
+
+    // Error stats (last 24h)
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const [errorCount, unresolvedCount] = await Promise.all([
+      this.prisma.errorlog.count({ where: { createdat: { gte: yesterday } } }),
+      this.prisma.errorlog.count({ where: { resolved: false } }),
+    ]);
+
+    return {
+      uptime: process.uptime(),
+      memory: {
+        heapUsedMB,
+        heapTotalMB: Math.round((mem.heapTotal / 1024 / 1024) * 100) / 100,
+        rssMB: Math.round((mem.rss / 1024 / 1024) * 100) / 100,
+        status: heapUsedMB > 512 ? 'warning' : 'ok',
+      },
+      database: { status: dbStatus },
+      errors: {
+        last24h: errorCount,
+        unresolved: unresolvedCount,
+      },
+    };
+  }
+
+  async getSystemStats() {
+    const [totalUsers, totalVideos, totalLikes, totalComments, totalReports] =
+      await Promise.all([
+        this.prisma.user.count(),
+        this.prisma.video.count(),
+        this.prisma.like.count(),
+        this.prisma.comment.count(),
+        this.prisma.report.count(),
+      ]);
+
+    // Today's stats
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const [newUsersToday, newVideosToday] = await Promise.all([
+      this.prisma.user.count({ where: { createdat: { gte: today } } }),
+      this.prisma.video.count({ where: { createdat: { gte: today } } }),
+    ]);
+
+    return {
+      totals: {
+        users: totalUsers,
+        videos: totalVideos,
+        likes: totalLikes,
+        comments: totalComments,
+        reports: totalReports,
+      },
+      today: { newUsers: newUsersToday, newVideos: newVideosToday },
     };
   }
 }

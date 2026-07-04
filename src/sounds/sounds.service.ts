@@ -64,8 +64,17 @@ export class SoundsService {
     }
   }
 
-  async saveSound(jamendoId: string, name: string, artist: string, duration: number, audioUrl: string, imageUrl?: string) {
-    const existing = await this.prisma.sound.findUnique({ where: { jamendoid: jamendoId } });
+  async saveSound(
+    jamendoId: string,
+    name: string,
+    artist: string,
+    duration: number,
+    audioUrl: string,
+    imageUrl?: string,
+  ) {
+    const existing = await this.prisma.sound.findUnique({
+      where: { jamendoid: jamendoId },
+    });
     if (existing) {
       return existing;
     }

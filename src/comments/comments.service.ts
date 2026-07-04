@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
@@ -10,7 +14,11 @@ export class CommentsService {
     private notificationsService: NotificationsService,
   ) {}
 
-  async createComment(userId: string, videoId: string, createCommentDto: CreateCommentDto) {
+  async createComment(
+    userId: string,
+    videoId: string,
+    createCommentDto: CreateCommentDto,
+  ) {
     // Check if video exists
     const video = await this.prisma.video.findUnique({
       where: { id: videoId },
@@ -59,7 +67,11 @@ export class CommentsService {
     return comment;
   }
 
-  async getVideoComments(videoId: string, page: number = 1, limit: number = 20) {
+  async getVideoComments(
+    videoId: string,
+    page: number = 1,
+    limit: number = 20,
+  ) {
     const skip = (page - 1) * limit;
 
     const [comments, total] = await Promise.all([

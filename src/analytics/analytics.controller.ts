@@ -2,10 +2,15 @@ import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AnalyticsService } from './analytics.service';
 import { CurrentUser } from '../auth/current-user.decorator';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiQuery,
+} from '@nestjs/swagger';
 
 @ApiTags('analytics')
-@Controller('analytics')
+@Controller('api/analytics')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class AnalyticsController {
@@ -13,7 +18,12 @@ export class AnalyticsController {
 
   @Get('creator')
   @ApiOperation({ summary: 'Get creator analytics overview' })
-  @ApiQuery({ name: 'days', required: false, type: Number, description: 'Number of days (default: 7)' })
+  @ApiQuery({
+    name: 'days',
+    required: false,
+    type: Number,
+    description: 'Number of days (default: 7)',
+  })
   async getCreatorAnalytics(
     @CurrentUser() user: any,
     @Query('days') days: number = 7,

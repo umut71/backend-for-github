@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 
 @Injectable()
@@ -125,12 +129,16 @@ export class EarningsService {
     return {
       success: true,
       amount: totalPending,
-      message: 'Payout request submitted. Processing typically takes 5-7 business days.',
+      message:
+        'Payout request submitted. Processing typically takes 5-7 business days.',
     };
   }
 
   // Get earnings analytics (daily/monthly breakdown)
-  async getEarningsAnalytics(userId: string, period: 'week' | 'month' | 'year') {
+  async getEarningsAnalytics(
+    userId: string,
+    period: 'week' | 'month' | 'year',
+  ) {
     const now = new Date();
     let startDate: Date;
 

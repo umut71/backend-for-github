@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 
 @Injectable()
@@ -41,7 +45,8 @@ export class ReportsService {
         status: report.status,
         createdAt: report.createdat,
       },
-      message: 'Report submitted successfully. Our team will review it shortly.',
+      message:
+        'Report submitted successfully. Our team will review it shortly.',
     };
   }
 
@@ -110,10 +115,18 @@ export class ReportsService {
             select: { id: true, username: true },
           },
           reportedVideo: {
-            select: { id: true, title: true, user: { select: { username: true } } },
+            select: {
+              id: true,
+              title: true,
+              user: { select: { username: true } },
+            },
           },
           reportedComment: {
-            select: { id: true, text: true, user: { select: { username: true } } },
+            select: {
+              id: true,
+              text: true,
+              user: { select: { username: true } },
+            },
           },
         },
         orderBy: { createdat: 'desc' },

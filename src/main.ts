@@ -3,56 +3,71 @@ import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { Request, Response, NextFunction } from 'express';
+import express from 'express';
 import helmet from 'helmet';
 import { GiftsService } from './gifts/gifts.service';
+import { join } from 'path';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
 
   // Security: Helmet for HTTP headers protection
-  app.use(helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-        imgSrc: ["'self'", 'data:', 'https:', 'http:'],
-        mediaSrc: ["'self'", 'https:', 'http:', 'blob:'],
-        connectSrc: ["'self'", 'https:', 'http:', 'ws:', 'wss:'],
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+          imgSrc: ["'self'", 'data:', 'https:', 'http:'],
+          mediaSrc: ["'self'", 'https:', 'http:', 'blob:'],
+          connectSrc: ["'self'", 'https:', 'http:', 'ws:', 'wss:'],
+        },
       },
-    },
-    crossOriginEmbedderPolicy: false,
-    crossOriginResourcePolicy: { policy: 'cross-origin' },
-  }));
+      crossOriginEmbedderPolicy: false,
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+    }),
+  );
 
   // CORS configuration - Restrict to your domains in production
-  const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [
-    'http://localhost:8081',
-    'http://localhost:19006',
-    'exp://192.168.1.1',
-    process.env.FRONTEND_URL,
-  ].filter(Boolean);
+  const allowedOrigins =
+    process.env.ALLOWED_ORIGINS?.split(',') ||
+    [
+      'http://localhost:8081',
+      'http://localhost:19006',
+      'exp://192.168.1.1',
+      process.env.FRONTEND_URL,
+      'https://buzz-web.vercel.app',
+      'http://localhost:3001',
+      'http://127.0.0.1:53350',
+    ].filter(Boolean);
 
   app.enableCors({
-    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    origin: (
+      origin: string | undefined,
+      callback: (err: Error | null, allow?: boolean) => void,
+    ) => {
       // Allow requests with no origin (mobile apps, Postman, etc.)
       if (!origin) return callback(null, true);
-      
-      // In development, allow all localhost
-      if (process.env.NODE_ENV !== 'production' && origin.includes('localhost')) {
+
+      // In development, allow ALL origins
+      if (process.env.NODE_ENV !== 'production') {
         return callback(null, true);
       }
-      
+
       // Check if origin is in allowed list
-      if (allowedOrigins.some(allowed => allowed && origin.startsWith(allowed))) {
+      if (
+        allowedOrigins.some((allowed) => allowed && origin.startsWith(allowed))
+      ) {
         return callback(null, true);
       }
-      
+
       callback(new Error('Not allowed by CORS'));
     },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
-    maxAge: 86400, // 24 hours
+    maxAge: 86400,
   });
 
   // Enable validation
@@ -75,7 +90,10 @@ async function bootstrap() {
 
   // Prevent CDN/browser caching of Swagger docs
   app.use('/api-docs', (req: Request, res: Response, next: NextFunction) => {
-    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader(
+      'Cache-Control',
+      'no-store, no-cache, must-revalidate, proxy-revalidate',
+    );
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
     res.setHeader('Surrogate-Control', 'no-store');
@@ -102,9 +120,12 @@ async function bootstrap() {
     `,
   });
 
-  await app.listen(3000);
-  console.log('🚀 Buzz API is running on http://localhost:3000');
-  console.log('📚 API Documentation available at http://localhost:3000/api-docs');
+  const port = process.env.PORT || 3000;
+  await app.listen(port);
+  console.log(`🚀 Buzz API is running on http://localhost:${port}`);
+  console.log(
+    `📚 API Documentation available at http://localhost:${port}/api-docs`,
+  );
 
   // Initialize gift types on startup
   try {
@@ -112,7 +133,10 @@ async function bootstrap() {
     await giftsService.initializeGiftTypes();
     console.log('🎁 Gift types initialized');
   } catch (error) {
-    console.error('❌ Failed to initialize gift types:', error?.message ?? 'Unknown error');
+    console.error(
+      '❌ Failed to initialize gift types:',
+      error?.message ?? 'Unknown error',
+    );
   }
 }
 bootstrap();

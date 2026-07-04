@@ -5,22 +5,22 @@ import { ChallengesService } from './challenges.service';
 @ApiTags('Challenges')
 @Controller('api/challenges')
 export class ChallengesController {
-  constructor(private challengesService: ChallengesService) {}
+  constructor(private readonly challengesService: ChallengesService) {}
 
   @Get('active')
-  @ApiOperation({ summary: 'Get active challenges' })
+  @ApiOperation({ summary: 'Retrieve all active challenges' })
   async getActiveChallenges() {
     return this.challengesService.getActiveChallenges();
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get all challenges' })
+  @ApiOperation({ summary: 'Retrieve all challenges' })
   async getAllChallenges() {
     return this.challengesService.getAllChallenges();
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get challenge by ID' })
+  @ApiOperation({ summary: 'Retrieve a specific challenge by ID' })
   async getChallengeById(@Param('id') id: string) {
     return this.challengesService.getChallengeById(id);
   }

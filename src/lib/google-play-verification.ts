@@ -40,9 +40,11 @@ class GooglePlayVerificationService {
     try {
       // Check if service account credentials exist
       const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
-      
+
       if (!credentialsPath) {
-        logger.warn('GOOGLE_APPLICATION_CREDENTIALS not set - verification disabled');
+        logger.warn(
+          'GOOGLE_APPLICATION_CREDENTIALS not set - verification disabled',
+        );
         return null;
       }
 
@@ -63,7 +65,10 @@ class GooglePlayVerificationService {
       logger.log('✅ Google Play API client initialized');
       return this.androidPublisher;
     } catch (error: any) {
-      logger.error('❌ Failed to initialize Google Play API client:', error?.message ?? error);
+      logger.error(
+        '❌ Failed to initialize Google Play API client:',
+        error?.message ?? error,
+      );
       return null;
     }
   }
@@ -103,15 +108,21 @@ class GooglePlayVerificationService {
       const isValid = purchase.purchaseState === 0; // 0 = Purchased, 1 = Canceled
 
       if (isValid) {
-        logger.log(`✅ Purchase verified: ${productId}, orderId: ${purchase.orderId ?? 'unknown'}`);
+        logger.log(
+          `✅ Purchase verified: ${productId}, orderId: ${purchase.orderId ?? 'unknown'}`,
+        );
       } else {
-        logger.warn(`❌ Purchase invalid: ${productId}, state: ${purchase.purchaseState ?? 'unknown'}`);
+        logger.warn(
+          `❌ Purchase invalid: ${productId}, state: ${purchase.purchaseState ?? 'unknown'}`,
+        );
       }
 
       return {
         isValid,
         orderId: purchase.orderId,
-        purchaseTime: purchase.purchaseTimeMillis ? parseInt(purchase.purchaseTimeMillis) : undefined,
+        purchaseTime: purchase.purchaseTimeMillis
+          ? parseInt(purchase.purchaseTimeMillis)
+          : undefined,
         purchaseState: purchase.purchaseState,
         consumptionState: purchase.consumptionState,
       };
@@ -136,7 +147,9 @@ class GooglePlayVerificationService {
 
       if (!publisher) {
         // Verification disabled - accept all subscriptions in development
-        logger.warn('⚠️ Subscription verification disabled - accepting subscription');
+        logger.warn(
+          '⚠️ Subscription verification disabled - accepting subscription',
+        );
         const now = Date.now();
         const oneMonth = 30 * 24 * 60 * 60 * 1000;
         return {
@@ -159,24 +172,37 @@ class GooglePlayVerificationService {
 
       // Check if subscription is active
       const now = Date.now();
-      const expiryTime = subscription.expiryTimeMillis ? parseInt(subscription.expiryTimeMillis) : 0;
+      const expiryTime = subscription.expiryTimeMillis
+        ? parseInt(subscription.expiryTimeMillis)
+        : 0;
       const isValid = expiryTime > now && subscription.paymentState === 1;
 
       if (isValid) {
-        logger.log(`✅ Subscription verified: ${subscriptionId}, expires: ${new Date(expiryTime).toISOString()}`);
+        logger.log(
+          `✅ Subscription verified: ${subscriptionId}, expires: ${new Date(expiryTime).toISOString()}`,
+        );
       } else {
-        logger.warn(`❌ Subscription invalid: ${subscriptionId}, expired or not paid`);
+        logger.warn(
+          `❌ Subscription invalid: ${subscriptionId}, expired or not paid`,
+        );
       }
 
       return {
         isValid,
-        startTime: subscription.startTimeMillis ? parseInt(subscription.startTimeMillis) : undefined,
-        expiryTime: subscription.expiryTimeMillis ? parseInt(subscription.expiryTimeMillis) : undefined,
+        startTime: subscription.startTimeMillis
+          ? parseInt(subscription.startTimeMillis)
+          : undefined,
+        expiryTime: subscription.expiryTimeMillis
+          ? parseInt(subscription.expiryTimeMillis)
+          : undefined,
         autoRenewing: subscription.autoRenewing ?? false,
         paymentState: subscription.paymentState,
       };
     } catch (error: any) {
-      logger.error('❌ Subscription verification failed:', error?.message ?? error);
+      logger.error(
+        '❌ Subscription verification failed:',
+        error?.message ?? error,
+      );
       return {
         isValid: false,
         error: error?.message ?? 'Verification failed',
@@ -187,7 +213,10 @@ class GooglePlayVerificationService {
   /**
    * Acknowledge a purchase (required by Google Play to prevent refund)
    */
-  async acknowledgePurchase(productId: string, purchaseToken: string): Promise<boolean> {
+  async acknowledgePurchase(
+    productId: string,
+    purchaseToken: string,
+  ): Promise<boolean> {
     try {
       const publisher = await this.getAndroidPublisher();
 
@@ -205,7 +234,10 @@ class GooglePlayVerificationService {
       logger.log(`✅ Purchase acknowledged: ${productId}`);
       return true;
     } catch (error: any) {
-      logger.error('❌ Purchase acknowledgment failed:', error?.message ?? error);
+      logger.error(
+        '❌ Purchase acknowledgment failed:',
+        error?.message ?? error,
+      );
       return false;
     }
   }
@@ -213,7 +245,10 @@ class GooglePlayVerificationService {
   /**
    * Acknowledge a subscription
    */
-  async acknowledgeSubscription(subscriptionId: string, purchaseToken: string): Promise<boolean> {
+  async acknowledgeSubscription(
+    subscriptionId: string,
+    purchaseToken: string,
+  ): Promise<boolean> {
     try {
       const publisher = await this.getAndroidPublisher();
 
@@ -231,7 +266,10 @@ class GooglePlayVerificationService {
       logger.log(`✅ Subscription acknowledged: ${subscriptionId}`);
       return true;
     } catch (error: any) {
-      logger.error('❌ Subscription acknowledgment failed:', error?.message ?? error);
+      logger.error(
+        '❌ Subscription acknowledgment failed:',
+        error?.message ?? error,
+      );
       return false;
     }
   }
