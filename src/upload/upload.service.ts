@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma.service';
 import {
@@ -19,7 +23,22 @@ import { CompleteUploadDto } from './dto/complete-upload.dto';
 export class UploadService {
   constructor(private prisma: PrismaService) {}
 
+  /**
+   * S3 yapılandırması yoksa 500 yerine anlamlı bir 503 hatası döndürür.
+   * (Render'da AWS_BUCKET_NAME / AWS_ACCESS_KEY_ID env değişkenleri
+   * ayarlanana kadar S3 upload devre dışıdır; /api/upload/local kullanın.)
+   */
+  private ensureS3Configured() {
+    if (!process.env.AWS_BUCKET_NAME || !process.env.AWS_ACCESS_KEY_ID) {
+      throw new ServiceUnavailableException(
+        'Cloud storage (S3) is not configured on this server. ' +
+          'Use POST /api/upload/local instead, or set AWS_* env vars.',
+      );
+    }
+  }
+
   async generatePresignedUrl(dto: PresignedUploadDto) {
+    this.ensureS3Configured();
     const fileId = randomUUID();
     const { uploadUrl, cloud_storage_path } = await generatePresignedUploadUrl(
       dto.fileName,
@@ -35,6 +54,7 @@ export class UploadService {
   }
 
   async initiateMultipart(dto: InitiateMultipartDto) {
+    this.ensureS3Configured();
     const fileId = randomUUID();
     const { uploadId, cloud_storage_path } = await initiateMultipartUpload(
       dto.fileName,
@@ -49,6 +69,7 @@ export class UploadService {
   }
 
   async getPartUploadUrl(dto: MultipartPartDto) {
+    this.ensureS3Configured();
     const uploadUrl = await getPresignedUrlForPart(
       dto.cloud_storage_path,
       dto.uploadId,
@@ -59,6 +80,7 @@ export class UploadService {
   }
 
   async completeMultipart(dto: CompleteMultipartDto) {
+    this.ensureS3Configured();
     const parts = dto.parts.map((part) => ({
       PartNumber: part.partNumber,
       ETag: part.etag,

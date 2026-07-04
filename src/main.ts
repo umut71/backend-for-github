@@ -67,9 +67,10 @@ async function bootstrap() {
         return callback(null, true);
       }
 
-      // Check if origin is in allowed list
+      // Check if origin is in allowed list (exact match — prefix matching is
+      // unsafe: "https://site.com" would also allow "https://site.com.evil.io")
       if (
-        allowedOrigins.some((allowed) => allowed && origin.startsWith(allowed))
+        allowedOrigins.some((allowed) => allowed && origin === allowed.trim())
       ) {
         return callback(null, true);
       }
