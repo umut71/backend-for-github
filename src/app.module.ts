@@ -11,6 +11,11 @@ import { UploadModule } from './upload/upload.module';
 // Feature Modules
 import { VideosModule } from './videos/videos.module';
 import { FeedModule } from './feed/feed.module';
+import { LikesModule } from './likes/likes.module';
+import { CommentsModule } from './comments/comments.module';
+import { FollowsModule } from './follows/follows.module';
+import { SavedModule } from './saved/saved.module';
+import { NotificationsModule } from './notifications/notifications.module';
 import { SoundsModule } from './sounds/sounds.module';
 import { ChallengesModule } from './challenges/challenges.module';
 import { HistoryModule } from './history/history.module';
@@ -77,6 +82,11 @@ import { AppService } from './app.service';
 
     VideosModule,
     FeedModule,
+    LikesModule,
+    CommentsModule,
+    FollowsModule,
+    SavedModule,
+    NotificationsModule,
     SoundsModule,
     ChallengesModule,
 
