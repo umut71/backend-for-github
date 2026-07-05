@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Buzz Admin — İçerik İnceleme (Stub)</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #111; color: #eee; margin: 0; padding: 24px; }
+    h1 { font-size: 20px; }
+    .card { background: #1c1c1e; border-radius: 12px; padding: 16px; margin: 12px 0; display: flex; gap: 16px; align-items: center; }
+    .card img { width: 120px; height: 68px; object-fit: cover; border-radius: 8px; background: #333; }
+    .meta { flex: 1; font-size: 13px; color: #aaa; }
+    .meta b { color: #fff; display: block; margin-bottom: 4px; }
+    button { border: 0; border-radius: 8px; padding: 8px 16px; font-weight: 600; cursor: pointer; }
+    .approve { background: #22c55e; color: #052e12; }
+    .reject { background: #ef4444; color: #fff; margin-left: 8px; }
+    .empty { color: #777; padding: 40px; text-align: center; }
+  </style>
+</head>
+<body>
+  <h1>🛡️ Buzz İçerik İnceleme Kuyruğu (Stub)</h1>
+  <p style="color:#888;font-size:13px">
+    Bu bir STUB arayüzdür. Prodüksiyonda backend'e şu endpointler eklenmelidir:<br />
+    <code>GET /api/admin/review-queue</code> (Redis LRANGE buzz:queue:human_review),
+    <code>POST /api/admin/review/:fileId</code> {decision: "approve"|"reject"} — admin JWT rolü zorunlu.
+  </p>
+  <div id="queue"></div>
+
+  <script>
+    const API = localStorage.getItem('buzz_api') || 'http://localhost:3000';
+
+    async function load() {
+      const el = document.getElementById('queue');
+      try {
+        // TODO: backend'e /api/admin/review-queue eklendiğinde gerçek veri gelir
+        const res = await fetch(`${API}/api/admin/review-queue`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('buzz_admin_token') || ''}` },
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const items = await res.json();
+        if (!items.length) { el.innerHTML = '<div class="empty">Kuyruk boş 🎉</div>'; return; }
+        el.innerHTML = items.map(i => `
+          <div class="card">
+            <img src="${i.thumbnailUrl || ''}" alt="thumb" />
+            <div class="meta"><b>fileId: ${i.fileId}</b>NSFW skor: ${i.nsfwScore} — ${new Date(i.queuedAt).toLocaleString('tr')}</div>
+            <div>
+              <button class="approve" onclick="decide('${i.fileId}','approve')">Onayla</button>
+              <button class="reject" onclick="decide('${i.fileId}','reject')">Reddet</button>
+            </div>
+          </div>`).join('');
+      } catch (e) {
+        el.innerHTML = `<div class="empty">Backend admin endpointi henüz yok (stub). Hata: ${e.message}</div>`;
+      }
+    }
+
+    async function decide(fileId, decision) {
+      await fetch(`${API}/api/admin/review/${fileId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('buzz_admin_token') || ''}`,
+        },
+        body: JSON.stringify({ decision }),
+      });
+      load();
+    }
+
+    load();
+  </script>
+</body>
+</html>

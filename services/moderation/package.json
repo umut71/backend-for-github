@@ -1,0 +1,15 @@
+{
+  "name": "buzz-moderation",
+  "version": "0.1.0",
+  "description": "Buzz moderasyon worker (stub) — thumbnail NSFW kontrolu + insan inceleme kuyrugu",
+  "main": "worker.js",
+  "scripts": {
+    "start": "node worker.js"
+  },
+  "dependencies": {
+    "ioredis": "^5.6.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
