@@ -7,8 +7,12 @@ import express from 'express';
 import helmet from 'helmet';
 import { GiftsService } from './gifts/gifts.service';
 import { join } from 'path';
+import { initSentry } from './observability/sentry';
 
 async function bootstrap() {
+  // Sentry (SENTRY_DSN tanımlıysa etkinleşir, değilse no-op)
+  initSentry();
+
   const app = await NestFactory.create(AppModule);
   app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
 

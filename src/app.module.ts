@@ -48,6 +48,7 @@ import { GiftsModule } from './gifts/gifts.module';
 import { PremiumModule } from './premium/premium.module';
 
 // Health and Miscellaneous
+import { ObservabilityModule } from './observability/observability.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { HealthController } from './health.controller';
@@ -75,6 +76,7 @@ import { AppService } from './app.service';
       },
     ]),
     PrismaModule,
+    ObservabilityModule,
 
     AuthModule,
     UsersModule,

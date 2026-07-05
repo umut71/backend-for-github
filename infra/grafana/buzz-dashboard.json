@@ -1,0 +1,67 @@
+{
+  "title": "Buzz Backend — Genel Bakış",
+  "uid": "buzz-backend-overview",
+  "schemaVersion": 39,
+  "tags": ["buzz", "backend"],
+  "time": { "from": "now-6h", "to": "now" },
+  "refresh": "30s",
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "İstek Hızı (req/s)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(rate(buzz_http_requests_total[5m])) by (route)",
+          "legendFormat": "{{route}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Ortalama Yanıt Süresi (s)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(rate(buzz_http_request_duration_seconds_sum[5m])) by (route) / sum(rate(buzz_http_request_duration_seconds_count[5m])) by (route)",
+          "legendFormat": "{{route}}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Hata Oranı (5xx %)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "100 * sum(rate(buzz_http_requests_total{status=~\"5..\"}[5m])) / sum(rate(buzz_http_requests_total[5m]))",
+          "legendFormat": "5xx %"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Uptime (saat)",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 8 },
+      "targets": [{ "expr": "buzz_process_uptime_seconds / 3600" }]
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "RSS Bellek (MB)",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 8 },
+      "targets": [{ "expr": "buzz_process_resident_memory_bytes / 1024 / 1024" }]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Heap Kullanımı (MB)",
+      "gridPos": { "h": 4, "w": 12, "x": 12, "y": 12 },
+      "targets": [{ "expr": "buzz_nodejs_heap_used_bytes / 1024 / 1024" }]
+    }
+  ]
+}
