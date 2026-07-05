@@ -10,6 +10,7 @@ import { UploadModule } from './upload/upload.module';
 
 // Feature Modules
 import { VideosModule } from './videos/videos.module';
+import { FeedModule } from './feed/feed.module';
 import { SoundsModule } from './sounds/sounds.module';
 import { ChallengesModule } from './challenges/challenges.module';
 import { HistoryModule } from './history/history.module';
@@ -75,6 +76,7 @@ import { AppService } from './app.service';
     UploadModule,
 
     VideosModule,
+    FeedModule,
     SoundsModule,
     ChallengesModule,
 
