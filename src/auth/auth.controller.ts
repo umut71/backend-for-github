@@ -17,6 +17,10 @@ import { AuthService } from './auth.service';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto, LogoutDto } from './dto/refresh.dto';
+import {
+  ForgotPasswordDto,
+  ResetPasswordDto,
+} from './dto/forgot-password.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { CurrentUser } from './current-user.decorator';
 
@@ -62,6 +66,27 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Refresh token revoked.' })
   async logout(@Body() logoutDto: LogoutDto) {
     return this.authService.logout(logoutDto.refreshToken);
+  }
+
+  @Post('forgot-password')
+  @HttpCode(200)
+  @Throttle({ short: { limit: 3, ttl: 60000 } }) // brute-force koruması
+  @ApiOperation({ summary: 'Request a password reset link' })
+  @ApiResponse({
+    status: 200,
+    description: 'Generic success (user enumeration önlenir).',
+  })
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(dto.email);
+  }
+
+  @Post('reset-password')
+  @HttpCode(200)
+  @Throttle({ short: { limit: 5, ttl: 60000 } })
+  @ApiOperation({ summary: 'Reset password using the emailed token' })
+  @ApiResponse({ status: 200, description: 'Password updated.' })
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto.token, dto.newPassword);
   }
 
   @Get('me')

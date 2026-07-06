@@ -3,69 +3,365 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Buzz Admin — İçerik İnceleme (Stub)</title>
+  <title>Buzz Admin Paneli</title>
   <style>
-    body { font-family: system-ui, sans-serif; background: #111; color: #eee; margin: 0; padding: 24px; }
-    h1 { font-size: 20px; }
-    .card { background: #1c1c1e; border-radius: 12px; padding: 16px; margin: 12px 0; display: flex; gap: 16px; align-items: center; }
-    .card img { width: 120px; height: 68px; object-fit: cover; border-radius: 8px; background: #333; }
-    .meta { flex: 1; font-size: 13px; color: #aaa; }
-    .meta b { color: #fff; display: block; margin-bottom: 4px; }
-    button { border: 0; border-radius: 8px; padding: 8px 16px; font-weight: 600; cursor: pointer; }
-    .approve { background: #22c55e; color: #052e12; }
-    .reject { background: #ef4444; color: #fff; margin-left: 8px; }
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: #0d0d0f; color: #eee; margin: 0; }
+    header { display: flex; align-items: center; gap: 16px; padding: 14px 24px; background: #17171a; border-bottom: 1px solid #2a2a2e; position: sticky; top: 0; z-index: 10; }
+    header h1 { font-size: 17px; margin: 0; }
+    header .spacer { flex: 1; }
+    header .who { font-size: 12px; color: #999; }
+    nav { display: flex; gap: 4px; padding: 10px 24px 0; background: #0d0d0f; }
+    nav button { background: transparent; border: 0; color: #999; padding: 10px 14px; font-size: 13px; font-weight: 600; cursor: pointer; border-radius: 8px 8px 0 0; }
+    nav button.active { color: #fff; background: #1c1c1e; }
+    main { padding: 20px 24px; }
+    .panel { background: #1c1c1e; border-radius: 12px; padding: 16px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { text-align: left; color: #888; font-weight: 600; padding: 8px 10px; border-bottom: 1px solid #2f2f33; }
+    td { padding: 8px 10px; border-bottom: 1px solid #232327; vertical-align: middle; }
+    tr:hover td { background: #222226; }
+    button.act { border: 0; border-radius: 7px; padding: 6px 12px; font-weight: 600; cursor: pointer; font-size: 12px; }
+    .danger { background: #ef4444; color: #fff; }
+    .ok { background: #22c55e; color: #052e12; }
+    .warn { background: #f59e0b; color: #3d2500; }
+    .ghost { background: #2c2c30; color: #ddd; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+    .badge.live { background: #ef4444; color: #fff; }
+    .badge.banned { background: #7f1d1d; color: #fecaca; }
+    .badge.active { background: #14532d; color: #bbf7d0; }
+    .badge.pending { background: #78350f; color: #fde68a; }
+    .stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px; }
+    .stat { background: #1c1c1e; border-radius: 12px; padding: 16px; }
+    .stat .num { font-size: 26px; font-weight: 800; color: #fff; }
+    .stat .lbl { font-size: 12px; color: #888; margin-top: 4px; }
+    .toolbar { display: flex; gap: 10px; margin-bottom: 12px; align-items: center; }
+    input[type="text"], input[type="email"], input[type="password"] { background: #232327; border: 1px solid #333; color: #eee; padding: 9px 12px; border-radius: 8px; font-size: 13px; outline: none; width: 100%; max-width: 320px; }
+    input:focus { border-color: #7c3aed; }
     .empty { color: #777; padding: 40px; text-align: center; }
+    .error-box { background: #3f1d1d; color: #fca5a5; border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-bottom: 12px; display: none; }
+    /* Login overlay */
+    #loginOverlay { position: fixed; inset: 0; background: #0d0d0f; display: flex; align-items: center; justify-content: center; z-index: 100; }
+    #loginBox { background: #1c1c1e; border-radius: 16px; padding: 32px; width: 360px; }
+    #loginBox h2 { margin: 0 0 6px; }
+    #loginBox p { color: #888; font-size: 13px; margin: 0 0 20px; }
+    #loginBox label { display: block; font-size: 12px; color: #999; margin: 12px 0 4px; }
+    #loginBox button { width: 100%; margin-top: 18px; padding: 11px; background: #7c3aed; color: #fff; border: 0; border-radius: 8px; font-weight: 700; font-size: 14px; cursor: pointer; }
+    .pager { display: flex; gap: 8px; margin-top: 12px; align-items: center; font-size: 13px; color: #999; }
+    .muted { color: #777; font-size: 12px; }
   </style>
 </head>
 <body>
-  <h1>🛡️ Buzz İçerik İnceleme Kuyruğu (Stub)</h1>
-  <p style="color:#888;font-size:13px">
-    Bu bir STUB arayüzdür. Prodüksiyonda backend'e şu endpointler eklenmelidir:<br />
-    <code>GET /api/admin/review-queue</code> (Redis LRANGE buzz:queue:human_review),
-    <code>POST /api/admin/review/:fileId</code> {decision: "approve"|"reject"} — admin JWT rolü zorunlu.
-  </p>
-  <div id="queue"></div>
+  <!-- LOGIN -->
+  <div id="loginOverlay">
+    <div id="loginBox">
+      <h2>🛡️ Buzz Admin</h2>
+      <p>Admin yetkili hesabınızla giriş yapın.</p>
+      <div class="error-box" id="loginError"></div>
+      <label>API Adresi</label>
+      <input type="text" id="apiUrl" placeholder="https://buzz-backend-na24.onrender.com" />
+      <label>E-posta</label>
+      <input type="email" id="email" placeholder="admin@buzz.app" />
+      <label>Şifre</label>
+      <input type="password" id="password" placeholder="••••••••" />
+      <button onclick="doLogin()">Giriş Yap</button>
+    </div>
+  </div>
+
+  <header>
+    <h1>🛡️ Buzz Admin Paneli</h1>
+    <div class="spacer"></div>
+    <span class="who" id="who"></span>
+    <button class="act ghost" onclick="logout()">Çıkış</button>
+  </header>
+
+  <nav id="tabs">
+    <button data-tab="dashboard" class="active" onclick="switchTab('dashboard')">📊 Dashboard</button>
+    <button data-tab="users" onclick="switchTab('users')">👥 Kullanıcılar</button>
+    <button data-tab="videos" onclick="switchTab('videos')">🎬 Videolar</button>
+    <button data-tab="live" onclick="switchTab('live')">🔴 Canlı Yayınlar</button>
+    <button data-tab="reports" onclick="switchTab('reports')">🚩 Raporlar</button>
+  </nav>
+
+  <main>
+    <div class="error-box" id="mainError"></div>
+    <div id="content" class="panel"><div class="empty">Yükleniyor…</div></div>
+  </main>
 
   <script>
-    const API = localStorage.getItem('buzz_api') || 'http://localhost:3000';
+    // ------------------------------------------------------------------
+    // Durum & yardımcılar
+    // ------------------------------------------------------------------
+    let API = localStorage.getItem('buzz_api') || 'https://buzz-backend-na24.onrender.com';
+    let TOKEN = localStorage.getItem('buzz_admin_token') || '';
+    let currentTab = 'dashboard';
+    let page = { users: 1, videos: 1 };
+    let search = { users: '', videos: '' };
 
-    async function load() {
-      const el = document.getElementById('queue');
+    const $ = (id) => document.getElementById(id);
+    const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+    function showError(msg) {
+      const el = $('mainError');
+      el.textContent = msg;
+      el.style.display = 'block';
+      setTimeout(() => (el.style.display = 'none'), 6000);
+    }
+
+    async function api(path, opts = {}) {
+      const res = await fetch(`${API}${path}`, {
+        ...opts,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${TOKEN}`,
+          ...(opts.headers || {}),
+        },
+      });
+      if (res.status === 401) { logout(); throw new Error('Oturum süresi doldu, tekrar giriş yapın'); }
+      if (res.status === 403) throw new Error('Yetkiniz yok (admin rolü/izni gerekli)');
+      if (!res.ok) {
+        let msg = `HTTP ${res.status}`;
+        try { const j = await res.json(); msg = j.message || msg; } catch {}
+        throw new Error(Array.isArray(msg) ? msg.join(', ') : msg);
+      }
+      return res.json();
+    }
+
+    // ------------------------------------------------------------------
+    // Auth
+    // ------------------------------------------------------------------
+    async function doLogin() {
+      const apiUrl = $('apiUrl').value.trim().replace(/\/$/, '');
+      const email = $('email').value.trim();
+      const password = $('password').value;
+      const errEl = $('loginError');
+      errEl.style.display = 'none';
+      if (!apiUrl || !email || !password) { errEl.textContent = 'Tüm alanları doldurun'; errEl.style.display = 'block'; return; }
       try {
-        // TODO: backend'e /api/admin/review-queue eklendiğinde gerçek veri gelir
-        const res = await fetch(`${API}/api/admin/review-queue`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('buzz_admin_token') || ''}` },
+        const res = await fetch(`${apiUrl}/api/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
         });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const items = await res.json();
-        if (!items.length) { el.innerHTML = '<div class="empty">Kuyruk boş 🎉</div>'; return; }
-        el.innerHTML = items.map(i => `
-          <div class="card">
-            <img src="${i.thumbnailUrl || ''}" alt="thumb" />
-            <div class="meta"><b>fileId: ${i.fileId}</b>NSFW skor: ${i.nsfwScore} — ${new Date(i.queuedAt).toLocaleString('tr')}</div>
-            <div>
-              <button class="approve" onclick="decide('${i.fileId}','approve')">Onayla</button>
-              <button class="reject" onclick="decide('${i.fileId}','reject')">Reddet</button>
-            </div>
-          </div>`).join('');
+        if (!res.ok) {
+          let msg = 'Giriş başarısız';
+          try { const j = await res.json(); msg = j.message || msg; } catch {}
+          throw new Error(msg);
+        }
+        const data = await res.json();
+        API = apiUrl; TOKEN = data.token;
+        localStorage.setItem('buzz_api', API);
+        localStorage.setItem('buzz_admin_token', TOKEN);
+        localStorage.setItem('buzz_admin_user', data.user?.username || email);
+        initApp();
       } catch (e) {
-        el.innerHTML = `<div class="empty">Backend admin endpointi henüz yok (stub). Hata: ${e.message}</div>`;
+        errEl.textContent = e.message;
+        errEl.style.display = 'block';
       }
     }
 
-    async function decide(fileId, decision) {
-      await fetch(`${API}/api/admin/review/${fileId}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('buzz_admin_token') || ''}`,
-        },
-        body: JSON.stringify({ decision }),
-      });
-      load();
+    function logout() {
+      TOKEN = '';
+      localStorage.removeItem('buzz_admin_token');
+      $('loginOverlay').style.display = 'flex';
     }
 
-    load();
+    function initApp() {
+      $('loginOverlay').style.display = 'none';
+      $('who').textContent = localStorage.getItem('buzz_admin_user') || '';
+      switchTab(currentTab);
+    }
+
+    // ------------------------------------------------------------------
+    // Sekmeler
+    // ------------------------------------------------------------------
+    function switchTab(tab) {
+      currentTab = tab;
+      document.querySelectorAll('nav button').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
+      $('content').innerHTML = '<div class="empty">Yükleniyor…</div>';
+      ({ dashboard: loadDashboard, users: loadUsers, videos: loadVideos, live: loadLive, reports: loadReports })[tab]();
+    }
+
+    // ---------------- Dashboard ----------------
+    async function loadDashboard() {
+      try {
+        const s = await api('/admin/dashboard/stats');
+        const stats = s.stats || s;
+        const entries = [
+          ['Toplam Kullanıcı', stats.totalUsers], ['Toplam Video', stats.totalVideos],
+          ['Toplam İzlenme', stats.totalViews], ['Toplam Beğeni', stats.totalLikes],
+          ['Toplam Yorum', stats.totalComments], ['Aktif Yayın', stats.activeLivestreams],
+          ['Banlı Kullanıcı', stats.bannedUsers], ['Bekleyen Rapor', stats.pendingReports],
+        ].filter(([, v]) => v !== undefined);
+        const rest = Object.entries(stats).filter(([k, v]) => typeof v !== 'object' && !entries.some(([l]) => false) && !['totalUsers','totalVideos','totalViews','totalLikes','totalComments','activeLivestreams','bannedUsers','pendingReports'].includes(k));
+        $('content').innerHTML = `
+          <div class="stats">
+            ${entries.map(([l, v]) => `<div class="stat"><div class="num">${esc(v)}</div><div class="lbl">${esc(l)}</div></div>`).join('')}
+            ${rest.map(([k, v]) => `<div class="stat"><div class="num">${esc(v)}</div><div class="lbl">${esc(k)}</div></div>`).join('')}
+          </div>
+          <div class="muted">Kaynak: GET /admin/dashboard/stats</div>`;
+      } catch (e) { $('content').innerHTML = `<div class="empty">Hata: ${esc(e.message)}</div>`; }
+    }
+
+    // ---------------- Kullanıcılar ----------------
+    async function loadUsers() {
+      try {
+        const q = search.users ? `&search=${encodeURIComponent(search.users)}` : '';
+        const data = await api(`/admin/users?page=${page.users}&limit=20${q}`);
+        const users = data.users || data.items || data;
+        $('content').innerHTML = `
+          <div class="toolbar">
+            <input type="text" id="userSearch" placeholder="Kullanıcı/e-posta ara…" value="${esc(search.users)}"
+              onkeydown="if(event.key==='Enter'){search.users=this.value;page.users=1;loadUsers();}" />
+            <button class="act ghost" onclick="search.users=$('userSearch').value;page.users=1;loadUsers()">Ara</button>
+          </div>
+          <table>
+            <tr><th>Kullanıcı</th><th>E-posta</th><th>Rol</th><th>Coin</th><th>Durum</th><th>Kayıt</th><th></th></tr>
+            ${(users || []).map((u) => `
+              <tr>
+                <td><b>${esc(u.username)}</b></td>
+                <td>${esc(u.email)}</td>
+                <td>${esc(u.role?.name || u.role || '-')}</td>
+                <td>${esc(u.coinbalance ?? '-')}</td>
+                <td>${u.isbanned ? '<span class="badge banned">BANLI</span>' : '<span class="badge active">Aktif</span>'}</td>
+                <td class="muted">${u.createdat ? new Date(u.createdat).toLocaleDateString('tr') : '-'}</td>
+                <td>${u.isbanned
+                  ? `<button class="act ok" onclick="unbanUser('${esc(u.id)}')">Banı Kaldır</button>`
+                  : `<button class="act danger" onclick="banUser('${esc(u.id)}','${esc(u.username)}')">Banla</button>`}
+                </td>
+              </tr>`).join('') || '<tr><td colspan="7" class="empty">Kullanıcı yok</td></tr>'}
+          </table>
+          <div class="pager">
+            <button class="act ghost" onclick="if(page.users>1){page.users--;loadUsers();}">← Önceki</button>
+            <span>Sayfa ${page.users}${data.totalPages ? ' / ' + data.totalPages : ''}</span>
+            <button class="act ghost" onclick="page.users++;loadUsers();">Sonraki →</button>
+          </div>`;
+      } catch (e) { $('content').innerHTML = `<div class="empty">Hata: ${esc(e.message)}</div>`; }
+    }
+
+    async function banUser(id, username) {
+      if (!confirm(`"${username}" kullanıcısını banlamak istediğinize emin misiniz?`)) return;
+      try { await api(`/admin/users/${id}/ban`, { method: 'PUT' }); loadUsers(); }
+      catch (e) { showError(e.message); }
+    }
+    async function unbanUser(id) {
+      try { await api(`/admin/users/${id}/unban`, { method: 'PUT' }); loadUsers(); }
+      catch (e) { showError(e.message); }
+    }
+
+    // ---------------- Videolar ----------------
+    async function loadVideos() {
+      try {
+        const q = search.videos ? `&search=${encodeURIComponent(search.videos)}` : '';
+        const data = await api(`/admin/videos?page=${page.videos}&limit=20${q}`);
+        const videos = data.videos || data.items || data;
+        $('content').innerHTML = `
+          <div class="toolbar">
+            <input type="text" id="videoSearch" placeholder="Video başlığı ara…" value="${esc(search.videos)}"
+              onkeydown="if(event.key==='Enter'){search.videos=this.value;page.videos=1;loadVideos();}" />
+            <button class="act ghost" onclick="search.videos=$('videoSearch').value;page.videos=1;loadVideos()">Ara</button>
+          </div>
+          <table>
+            <tr><th>Başlık</th><th>Sahibi</th><th>İzlenme</th><th>Beğeni</th><th>Yorum</th><th>Tarih</th><th></th></tr>
+            ${(videos || []).map((v) => `
+              <tr>
+                <td><b>${esc(v.title)}</b></td>
+                <td>${esc(v.user?.username || v.userid)}</td>
+                <td>${esc(v.viewcount ?? 0)}</td>
+                <td>${esc(v.likecount ?? 0)}</td>
+                <td>${esc(v.commentcount ?? 0)}</td>
+                <td class="muted">${v.createdat ? new Date(v.createdat).toLocaleDateString('tr') : '-'}</td>
+                <td><button class="act danger" onclick="deleteVideo('${esc(v.id)}','${esc(v.title)}')">Sil</button></td>
+              </tr>`).join('') || '<tr><td colspan="7" class="empty">Video yok</td></tr>'}
+          </table>
+          <div class="pager">
+            <button class="act ghost" onclick="if(page.videos>1){page.videos--;loadVideos();}">← Önceki</button>
+            <span>Sayfa ${page.videos}${data.totalPages ? ' / ' + data.totalPages : ''}</span>
+            <button class="act ghost" onclick="page.videos++;loadVideos();">Sonraki →</button>
+          </div>`;
+      } catch (e) { $('content').innerHTML = `<div class="empty">Hata: ${esc(e.message)}</div>`; }
+    }
+
+    async function deleteVideo(id, title) {
+      if (!confirm(`"${title}" videosunu kalıcı olarak silmek istediğinize emin misiniz?`)) return;
+      try { await api(`/admin/videos/${id}`, { method: 'DELETE' }); loadVideos(); }
+      catch (e) { showError(e.message); }
+    }
+
+    // ---------------- Canlı Yayınlar ----------------
+    async function loadLive() {
+      try {
+        let data;
+        try {
+          data = await api('/admin/livestreams');
+        } catch (e) {
+          // Eski backend sürümü: public aktif yayın listesine düş
+          data = await api('/api/livestream/active');
+        }
+        const streams = data.livestreams || data.items || data;
+        $('content').innerHTML = `
+          <div class="toolbar"><button class="act ghost" onclick="loadLive()">↻ Yenile</button></div>
+          <table>
+            <tr><th>Başlık</th><th>Yayıncı</th><th>İzleyici</th><th>Zirve</th><th>Başlangıç</th><th>Durum</th><th></th></tr>
+            ${(Array.isArray(streams) ? streams : []).map((s) => `
+              <tr>
+                <td><b>${esc(s.title)}</b></td>
+                <td>${esc(s.user?.username || s.userid)}</td>
+                <td>${esc(s.viewercount ?? 0)}</td>
+                <td>${esc(s.peakviewers ?? 0)}</td>
+                <td class="muted">${s.starttime ? new Date(s.starttime).toLocaleString('tr') : '-'}</td>
+                <td><span class="badge live">CANLI</span></td>
+                <td><button class="act danger" onclick="stopLive('${esc(s.id)}','${esc(s.title)}')">Yayını Durdur</button></td>
+              </tr>`).join('') || '<tr><td colspan="7" class="empty">Aktif yayın yok</td></tr>'}
+          </table>`;
+      } catch (e) { $('content').innerHTML = `<div class="empty">Hata: ${esc(e.message)}</div>`; }
+    }
+
+    async function stopLive(id, title) {
+      if (!confirm(`"${title}" yayınını zorla durdurmak istediğinize emin misiniz?`)) return;
+      try { await api(`/admin/livestreams/${id}/stop`, { method: 'POST' }); loadLive(); }
+      catch (e) {
+        if (/HTTP 404/.test(e.message) || /Cannot POST/.test(e.message)) {
+          showError('Yayını zorla durdurma, backend\'in yeni sürümünü gerektirir (deploy bekleniyor)');
+        } else { showError(e.message); }
+      }
+    }
+
+    // ---------------- Raporlar ----------------
+    async function loadReports() {
+      try {
+        const data = await api('/reports/admin/all');
+        const reports = data.reports || data.items || data;
+        $('content').innerHTML = `
+          <div class="toolbar"><button class="act ghost" onclick="loadReports()">↻ Yenile</button></div>
+          <table>
+            <tr><th>Tür</th><th>Neden</th><th>Raporlayan</th><th>Hedef</th><th>Durum</th><th>Tarih</th><th></th></tr>
+            ${(Array.isArray(reports) ? reports : []).map((r) => `
+              <tr>
+                <td>${esc(r.reportedtype)}</td>
+                <td><b>${esc(r.reason)}</b>${r.description ? `<div class="muted">${esc(r.description)}</div>` : ''}</td>
+                <td>${esc(r.reporter?.username || r.reporterid)}</td>
+                <td>${esc(r.reportedUser?.username || r.reportedVideo?.title || r.reporteduserid || r.reportedvideoid || '-')}</td>
+                <td>${r.status === 'pending' ? '<span class="badge pending">Bekliyor</span>' : `<span class="badge active">${esc(r.status)}</span>`}</td>
+                <td class="muted">${r.createdat ? new Date(r.createdat).toLocaleDateString('tr') : '-'}</td>
+                <td>${r.status === 'pending' ? `
+                  <button class="act ok" onclick="resolveReport('${esc(r.id)}','approved')">Onayla</button>
+                  <button class="act warn" onclick="resolveReport('${esc(r.id)}','rejected')">Reddet</button>` : ''}
+                </td>
+              </tr>`).join('') || '<tr><td colspan="7" class="empty">Rapor yok 🎉</td></tr>'}
+          </table>`;
+      } catch (e) { $('content').innerHTML = `<div class="empty">Hata: ${esc(e.message)}</div>`; }
+    }
+
+    async function resolveReport(id, action) {
+      try { await api(`/reports/admin/${id}/resolve`, { method: 'PUT', body: JSON.stringify({ action }) }); loadReports(); }
+      catch (e) { showError(e.message); }
+    }
+
+    // ------------------------------------------------------------------
+    // Başlat
+    // ------------------------------------------------------------------
+    $('apiUrl').value = API;
+    if (TOKEN) initApp(); else $('loginOverlay').style.display = 'flex';
   </script>
 </body>
 </html>

@@ -21,6 +21,7 @@ import { InitiateMultipartDto } from './dto/initiate-multipart.dto';
 import { MultipartPartDto } from './dto/multipart-part.dto';
 import { CompleteMultipartDto } from './dto/complete-multipart.dto';
 import { CompleteUploadDto } from './dto/complete-upload.dto';
+import { enqueueTranscode } from '../lib/transcode-queue';
 
 @Injectable()
 export class UploadService {
@@ -144,6 +145,16 @@ export class UploadService {
     });
 
     const fileUrl = await getFileUrl(file.cloud_storage_path, file.ispublic);
+
+    // Video ise arka plan transcode kuyruğuna iş yaz (HLS + thumbnail).
+    // Fire-and-forget: Redis yoksa/hata olursa upload yanıtını ASLA etkilemez.
+    if (isS3Path && dto.mimeType?.startsWith('video/')) {
+      void enqueueTranscode({
+        fileId: file.id,
+        s3Key: file.cloud_storage_path,
+        mimeType: dto.mimeType,
+      });
+    }
 
     return {
       id: file.id,

@@ -1,0 +1,50 @@
+// Sadece admin rol atamasi icin minimal PostgreSQL semasi.
+// Ana semayi/lokal SQLite client'i ETKILEMEZ (ayri output).
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/pg-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("PG_DATABASE_URL")
+}
+
+model user {
+  id       String  @id
+  email    String  @unique
+  username String  @unique
+  roleid   String?
+  role     role?   @relation(fields: [roleid], references: [id])
+}
+
+model role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  displayname String
+  description String?
+  createdat   DateTime @default(now())
+  updatedat   DateTime @updatedAt
+  users       user[]
+  permissions rolepermission[]
+}
+
+model permission {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  category    String
+  description String?
+  createdat   DateTime @default(now())
+  roles       rolepermission[]
+}
+
+model rolepermission {
+  id           String     @id @default(cuid())
+  roleid       String
+  permissionid String
+  createdat    DateTime   @default(now())
+  role         role       @relation(fields: [roleid], references: [id])
+  permission   permission @relation(fields: [permissionid], references: [id])
+
+  @@unique([roleid, permissionid])
+}

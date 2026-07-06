@@ -124,4 +124,48 @@ export class LivestreamController {
   ) {
     return this.livestreamService.getRtcToken(channelName, user.id, role);
   }
+
+  @Get(':livestreamId/livekit-token')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Get LiveKit access token for a live stream (P0-2)',
+  })
+  async getLivekitToken(
+    @CurrentUser() user: any,
+    @Param('livestreamId') livestreamId: string,
+    @Query('role') role: 'publisher' | 'viewer' = 'viewer',
+  ) {
+    return this.livestreamService.getLivekitToken(livestreamId, user.id, role);
+  }
+
+  @Post(':livestreamId/kick')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Kick (and optionally ban) a viewer — stream owner only',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        userId: { type: 'string' },
+        ban: { type: 'boolean' },
+      },
+      required: ['userId'],
+    },
+  })
+  async kickViewer(
+    @CurrentUser() user: any,
+    @Param('livestreamId') livestreamId: string,
+    @Body('userId') targetUserId: string,
+    @Body('ban') ban = false,
+  ) {
+    return this.livestreamService.kickViewer(
+      livestreamId,
+      user.id,
+      targetUserId,
+      !!ban,
+    );
+  }
 }

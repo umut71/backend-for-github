@@ -2,15 +2,24 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { getFileUrl } from '../lib/s3';
+import { livekit } from '../lib/livekit';
 import { randomBytes } from 'crypto';
 import { RtcTokenBuilder, RtcRole } from 'agora-token';
 
 @Injectable()
 export class LivestreamService {
   constructor(private prisma: PrismaService) {}
+
+  /**
+   * Yayın bazlı ban listesi (moderasyon MVP).
+   * Kalıcılık gerekmez: yayın bittiğinde ban da anlamını yitirir.
+   * key: livestreamId, value: banlanan userId seti
+   */
+  private bannedViewers = new Map<string, Set<string>>();
 
   /**
    * Start a new live stream
@@ -144,6 +153,149 @@ export class LivestreamService {
         endtime: new Date(),
       },
     });
+
+    // LiveKit odasını da kapat (izleyiciler otomatik düşer)
+    if (livekit.isConfigured() && livestream.channelname) {
+      await livekit.deleteRoom(livestream.channelname);
+    }
+
+    this.bannedViewers.delete(livestreamId);
+  }
+
+  /**
+   * LiveKit erişim token'ı üret (P0-2).
+   * role=publisher yalnızca yayın sahibine verilir; diğer herkes viewer.
+   */
+  async getLivekitToken(
+    livestreamId: string,
+    userId: string,
+    requestedRole: 'publisher' | 'viewer',
+  ): Promise<any> {
+    if (!livekit.isConfigured()) {
+      throw new BadRequestException(
+        'LiveKit is not configured (LIVEKIT_URL / LIVEKIT_API_KEY / LIVEKIT_API_SECRET)',
+      );
+    }
+
+    const livestream = await this.prisma.livestream.findUnique({
+      where: { id: livestreamId },
+      include: {
+        user: { select: { id: true, username: true } },
+      },
+    });
+
+    if (!livestream) {
+      throw new NotFoundException('Live stream not found');
+    }
+    if (livestream.status !== 'live') {
+      throw new BadRequestException('This live stream has ended');
+    }
+
+    // Ban kontrolü (moderasyon)
+    if (this.bannedViewers.get(livestreamId)?.has(userId)) {
+      throw new ForbiddenException('You are banned from this live stream');
+    }
+
+    // publisher rolü yalnızca yayın sahibine
+    const role: 'publisher' | 'viewer' =
+      requestedRole === 'publisher' && livestream.userid === userId
+        ? 'publisher'
+        : 'viewer';
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { username: true },
+    });
+
+    const token = await livekit.createToken({
+      roomName: livestream.channelname,
+      identity: userId,
+      name: user?.username ?? userId,
+      role,
+    });
+
+    return {
+      token,
+      url: livekit.url,
+      roomName: livestream.channelname,
+      role,
+    };
+  }
+
+  /**
+   * Moderasyon: izleyiciyi yayından at (kick) ve istenirse banla.
+   * Yalnızca yayın sahibi (veya admin katmanı) çağırabilir.
+   */
+  async kickViewer(
+    livestreamId: string,
+    requesterId: string,
+    targetUserId: string,
+    ban: boolean,
+    isAdmin = false,
+  ): Promise<any> {
+    const livestream = await this.prisma.livestream.findUnique({
+      where: { id: livestreamId },
+    });
+
+    if (!livestream) {
+      throw new NotFoundException('Live stream not found');
+    }
+    if (!isAdmin && livestream.userid !== requesterId) {
+      throw new ForbiddenException('Only the stream owner can moderate');
+    }
+    if (targetUserId === livestream.userid) {
+      throw new BadRequestException('Cannot kick the stream owner');
+    }
+
+    // LiveKit'ten at
+    let kicked = false;
+    if (livekit.isConfigured() && livestream.channelname) {
+      kicked = await livekit.removeParticipant(
+        livestream.channelname,
+        targetUserId,
+      );
+    }
+
+    // Ban listesine ekle (yeni token alamaz)
+    if (ban) {
+      if (!this.bannedViewers.has(livestreamId)) {
+        this.bannedViewers.set(livestreamId, new Set());
+      }
+      this.bannedViewers.get(livestreamId)!.add(targetUserId);
+    }
+
+    // Viewer kaydını da düş
+    await this.leaveLivestream(livestreamId, targetUserId);
+
+    return { success: true, kicked, banned: ban };
+  }
+
+  /**
+   * Moderasyon (admin): yayını zorla durdur.
+   */
+  async forceStopLivestream(livestreamId: string): Promise<any> {
+    const livestream = await this.prisma.livestream.findUnique({
+      where: { id: livestreamId },
+    });
+
+    if (!livestream) {
+      throw new NotFoundException('Live stream not found');
+    }
+    if (livestream.status !== 'live') {
+      return { success: true, alreadyEnded: true };
+    }
+
+    await this.prisma.livestream.update({
+      where: { id: livestreamId },
+      data: { status: 'ended', endtime: new Date() },
+    });
+
+    if (livekit.isConfigured() && livestream.channelname) {
+      await livekit.deleteRoom(livestream.channelname);
+    }
+
+    this.bannedViewers.delete(livestreamId);
+    return { success: true };
   }
 
   async getLivestreamGifts(livestreamId: string) {

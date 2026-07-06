@@ -20,6 +20,7 @@ import {
   ApiBody,
 } from '@nestjs/swagger';
 import { AdminService } from './admin.service';
+import { LivestreamService } from '../livestream/livestream.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { RequirePermissions } from '../auth/permissions.decorator';
@@ -29,7 +30,10 @@ import { RequirePermissions } from '../auth/permissions.decorator';
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @ApiBearerAuth()
 export class AdminController {
-  constructor(private readonly adminService: AdminService) {}
+  constructor(
+    private readonly adminService: AdminService,
+    private readonly livestreamService: LivestreamService,
+  ) {}
 
   // Dashboard İstatistikleri
   @Get('dashboard/stats')
@@ -141,6 +145,23 @@ export class AdminController {
   @ApiResponse({ status: 200, description: 'Video deleted successfully' })
   async deleteVideo(@Param('id') videoId: string) {
     return this.adminService.deleteVideo(videoId);
+  }
+
+  // Livestream Moderation
+  @Get('livestreams')
+  @RequirePermissions('video.view', 'video.moderate')
+  @ApiOperation({ summary: 'Get active livestreams (admin)' })
+  @ApiResponse({ status: 200, description: 'Returns active livestreams' })
+  async getActiveLivestreams() {
+    return this.livestreamService.getActiveLivestreams();
+  }
+
+  @Post('livestreams/:id/stop')
+  @RequirePermissions('video.moderate', 'system.manage')
+  @ApiOperation({ summary: 'Force-stop a livestream (admin)' })
+  @ApiResponse({ status: 200, description: 'Livestream stopped' })
+  async forceStopLivestream(@Param('id') livestreamId: string) {
+    return this.livestreamService.forceStopLivestream(livestreamId);
   }
 
   // Financial Reports
