@@ -35,18 +35,37 @@ async function bootstrap() {
   );
 
   // CORS configuration - Restrict to your domains in production
-  const allowedOrigins =
-    process.env.ALLOWED_ORIGINS?.split(',') ||
-    [
-      'http://localhost:8081',
-      'http://localhost:19006',
-      'http://localhost:3000',
-      'exp://192.168.1.1',
-      process.env.FRONTEND_URL,
-      'https://buzz-web.vercel.app',
-      'http://localhost:3001',
-      'http://127.0.0.1:53350',
-    ].filter(Boolean);
+  // Varsayılan (kod içi) izinli origin listesi — yedek önlem.
+  const defaultAllowedOrigins = [
+    'http://localhost:8081',
+    'http://localhost:19006',
+    'http://localhost:3000',
+    'exp://192.168.1.1',
+    process.env.FRONTEND_URL,
+    process.env.APP_ORIGIN,
+    'https://buzz.org.tr',
+    'https://www.buzz.org.tr',
+    'https://buzz-web.vercel.app',
+    'http://localhost:3001',
+    'http://127.0.0.1:53350',
+  ];
+
+  // ÖNEMLİ: Eskiden `process.env.ALLOWED_ORIGINS?.split(',') || [...]` kullanılıyordu.
+  // Bu yüzden ALLOWED_ORIGINS env'i tanımlandığı anda kod içindeki tüm liste yok
+  // sayılıyor ve buzz.org.tr / buzz-web.vercel.app CORS hatası (HTTP 500) alıyordu.
+  // Artık env değeri ile varsayılan liste BİRLEŞTİRİLİYOR.
+  const allowedOrigins = Array.from(
+    new Set(
+      [
+        ...(process.env.ALLOWED_ORIGINS?.split(',') ?? []),
+        ...defaultAllowedOrigins,
+      ]
+        .filter((o): o is string => Boolean(o && o.trim()))
+        .map((o) => o.trim()),
+    ),
+  );
+
+  console.log('[CORS] Allowed origins:', allowedOrigins.join(', '));
 
   app.enableCors({
     origin: (
@@ -79,7 +98,10 @@ async function bootstrap() {
         return callback(null, true);
       }
 
-      callback(new Error('Not allowed by CORS'));
+      // NOT: Buraya `callback(new Error(...))` verilirse Nest 500 döndürür ve
+      // tarayıcıda gerçek sebep gizlenir. `false` ile temiz bir CORS reddi olur.
+      console.warn(`[CORS] Blocked origin: ${origin}`);
+      callback(null, false);
     },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,

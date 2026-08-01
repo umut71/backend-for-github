@@ -32,6 +32,18 @@ services:
         sync: false
       - key: AGORA_APP_CERTIFICATE
         sync: false
+      - key: LIVEKIT_URL
+        sync: false
+      - key: LIVEKIT_API_KEY
+        sync: false
+      - key: LIVEKIT_API_SECRET
+        sync: false
+      # Canlı yayın için gerekli minimum takipçi sayısı.
+      # Test aşamasında 0 (herkes yayın açabilir); prodüksiyonda 1000 yapılabilir.
+      # sync: false -> Render Dashboard'da elle girilen değer blueprint tarafından EZİLMEZ.
+      # Env tanımlı değilse backend kodu güvenli varsayılan olarak 0 kullanır.
+      - key: LIVESTREAM_MIN_FOLLOWERS
+        sync: false
       - key: JAMENDO_CLIENT_ID
         sync: false
       - key: ABACUSAI_API_KEY
@@ -48,6 +60,8 @@ databases:
 # After deploy, set env vars in Render Dashboard:
 # AWS_BUCKET_NAME, AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
 # AGORA_APP_ID, AGORA_APP_CERTIFICATE
+# LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET
+# LIVESTREAM_MIN_FOLLOWERS (0 = herkes yayın açabilir, prod için 1000)
 # FRONTEND_URL, ALLOWED_ORIGINS (your app domains)
 # JAMENDO_CLIENT_ID, ABACUSAI_API_KEY
 # API docs: https://<service>.onrender.com/api-docs

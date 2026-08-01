@@ -10,6 +10,43 @@ import { livekit } from '../lib/livekit';
 import { randomBytes } from 'crypto';
 import { RtcTokenBuilder, RtcRole } from 'agora-token';
 
+/**
+ * Canlı yayın için minimum takipçi sayısı (render.yaml -> LIVESTREAM_MIN_FOLLOWERS).
+ *
+ * - Env tanımlı DEĞİLSE veya geçersizse  -> 0 (herkes yayın açabilir, test modu)
+ * - Env `0`                              -> takipçi kontrolü tamamen atlanır
+ * - Env `1000`                           -> prodüksiyon davranışı (1000+ takipçi şartı)
+ *
+ * Render'da değeri değiştirmek için kod değişikliği gerekmez; yalnızca
+ * Environment > LIVESTREAM_MIN_FOLLOWERS güncellenip servis restart edilir.
+ */
+function resolveMinFollowers(): number {
+  const raw = process.env.LIVESTREAM_MIN_FOLLOWERS;
+  if (raw === undefined || raw === null || String(raw).trim() === '') {
+    return 0;
+  }
+  const parsed = Number(String(raw).trim());
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    console.warn(
+      `[Livestream] Geçersiz LIVESTREAM_MIN_FOLLOWERS="${raw}" — 0 olarak kabul edildi.`,
+    );
+    return 0;
+  }
+  return Math.floor(parsed);
+}
+
+const MIN_FOLLOWERS_TO_GO_LIVE = resolveMinFollowers();
+
+console.log(
+  `[Livestream] LIVESTREAM_MIN_FOLLOWERS=${
+    process.env.LIVESTREAM_MIN_FOLLOWERS ?? '(tanımsız)'
+  } -> etkin eşik: ${MIN_FOLLOWERS_TO_GO_LIVE} ${
+    MIN_FOLLOWERS_TO_GO_LIVE === 0
+      ? '(takipçi şartı YOK)'
+      : '(takipçi şartı aktif)'
+  }`,
+);
+
 @Injectable()
 export class LivestreamService {
   constructor(private prisma: PrismaService) {}
@@ -29,17 +66,19 @@ export class LivestreamService {
     title: string,
     thumbnailFileId?: string,
   ): Promise<any> {
-    // Check follower count requirement (minimum 1000 followers)
-    const followerCount = await this.prisma.follow.count({
-      where: {
-        followingid: userId,
-      },
-    });
+    // Check follower count requirement (MIN_FOLLOWERS_TO_GO_LIVE — test için 0)
+    if (MIN_FOLLOWERS_TO_GO_LIVE > 0) {
+      const followerCount = await this.prisma.follow.count({
+        where: {
+          followingid: userId,
+        },
+      });
 
-    if (followerCount < 1000) {
-      throw new BadRequestException(
-        `You need at least 1,000 followers to go live. You currently have ${followerCount} followers.`,
-      );
+      if (followerCount < MIN_FOLLOWERS_TO_GO_LIVE) {
+        throw new BadRequestException(
+          `You need at least ${MIN_FOLLOWERS_TO_GO_LIVE} followers to go live. You currently have ${followerCount} followers.`,
+        );
+      }
     }
 
     // Check if user already has an active stream
@@ -98,9 +137,9 @@ export class LivestreamService {
     ]);
 
     return {
-      canGoLive: followerCount >= 1000 && !activeStream,
+      canGoLive: followerCount >= MIN_FOLLOWERS_TO_GO_LIVE && !activeStream,
       followerCount,
-      requiredFollowers: 1000,
+      requiredFollowers: MIN_FOLLOWERS_TO_GO_LIVE,
       hasActiveStream: !!activeStream,
       activeStreamId: activeStream?.id || null,
     };
